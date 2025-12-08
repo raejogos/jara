@@ -92,7 +92,9 @@ export async function convertMedia(
     mkv: "video/x-matroska",
   };
 
-  return new Blob([data], { type: mimeTypes[outputFormat] || "application/octet-stream" });
+  // Convert Uint8Array to ArrayBuffer specifically for Blob
+  const buffer = data instanceof Uint8Array ? data.buffer : data;
+  return new Blob([buffer as BlobPart], { type: mimeTypes[outputFormat] || "application/octet-stream" });
 }
 
 // Convert image using Canvas API (fast, native)
