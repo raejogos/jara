@@ -1,0 +1,128 @@
+import { useState, useEffect, useMemo } from "react";
+
+interface UrlInputProps {
+  onSubmit: (url: string) => void;
+  isLoading: boolean;
+  error: string | null;
+}
+
+const slogans = [
+  "baixa isso aí rapidinho",
+  "salva antes que suma",
+  "offline é o novo online",
+  "guarda pra ver depois",
+  "backup nunca é demais",
+  "colecione memórias",
+  "eu vou fazer uma oferta irrecusável",
+  "houston, temos um download",
+  "que a força esteja com você",
+  "eu voltarei... com seu arquivo",
+  "elementar, meu caro usuário",
+  "rápido e certeiro",
+  "missão: download",
+  "do jeito que tem que ser",
+  "na velocidade da luz",
+];
+
+const loadingMessages = [
+  "buscando informações",
+  "quase lá",
+  "processando",
+  "só mais um segundo",
+  "carregando metadados",
+  "analisando formatos",
+  "preparando opções",
+  "conectando",
+];
+
+export function UrlInput({ onSubmit, isLoading, error }: UrlInputProps) {
+  const [url, setUrl] = useState("");
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  // Random slogan on mount
+  const slogan = useMemo(() => {
+    return slogans[Math.floor(Math.random() * slogans.length)];
+  }, []);
+
+  // Cycle through loading messages
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingMessageIndex(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (url.trim()) {
+      onSubmit(url.trim());
+    }
+  };
+
+  return (
+    <div>
+      {/* Slogan */}
+      <p className="text-center text-gray-600 text-lg font-light tracking-wide mb-8 animate-fade-in font-display">
+        {slogan}
+      </p>
+
+      <form onSubmit={handleSubmit} className="flex gap-3">
+        <div className="flex-1 relative">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+              />
+            </svg>
+          </div>
+          <input
+            type="text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="cole o link aqui"
+            className="w-full bg-dark-900 border border-dark-600 rounded-xl pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:border-dark-400 focus:bg-dark-800 transition-all font-mono text-sm"
+            disabled={isLoading}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading || !url.trim()}
+          className="px-6 py-4 bg-dark-800 border border-dark-600 hover:bg-dark-700 rounded-xl transition-all flex items-center gap-2 text-gray-300 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <span className="text-sm font-medium">buscar</span>
+        </button>
+      </form>
+
+      {isLoading && (
+        <div className="flex items-center justify-center gap-3 mt-6 text-gray-500">
+          <div className="w-4 h-4 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
+          <span className="text-xs font-mono tracking-wider uppercase">{loadingMessages[loadingMessageIndex]}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-4 p-4 bg-dark-800 border border-dark-600 rounded-lg text-gray-400 text-sm">
+          <p>{error}</p>
+        </div>
+      )}
+    </div>
+  );
+}
