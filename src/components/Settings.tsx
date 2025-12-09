@@ -1,4 +1,10 @@
+import { useState } from "react";
+import { platform } from "../services/api";
 import type { AppSettings } from "../types";
+
+const CURRENT_VERSION = "1.0.0";
+const GITHUB_RELEASES_URL = "https://api.github.com/repos/raejogos/jara/releases/latest";
+const DOWNLOAD_URL = "https://github.com/raejogos/jara/releases/latest";
 
 interface SettingsProps {
   settings: AppSettings;
@@ -6,6 +12,27 @@ interface SettingsProps {
 }
 
 export function Settings({ settings, onSettingsChange }: SettingsProps) {
+  const [updateStatus, setUpdateStatus] = useState<"idle" | "checking" | "available" | "up-to-date" | "error">("idle");
+  const [latestVersion, setLatestVersion] = useState<string | null>(null);
+
+  const checkForUpdates = async () => {
+    setUpdateStatus("checking");
+    try {
+      const response = await fetch(GITHUB_RELEASES_URL);
+      if (!response.ok) throw new Error("Failed to fetch");
+      const data = await response.json();
+      const latest = data.tag_name?.replace("v", "") || data.name;
+      setLatestVersion(latest);
+      
+      if (latest && latest !== CURRENT_VERSION) {
+        setUpdateStatus("available");
+      } else {
+        setUpdateStatus("up-to-date");
+      }
+    } catch {
+      setUpdateStatus("error");
+    }
+  };
   const handleSelectDefaultFolder = async () => {
     try {
       const { open } = await import("@tauri-apps/plugin-dialog");
@@ -139,6 +166,77 @@ export function Settings({ settings, onSettingsChange }: SettingsProps) {
           ))}
         </div>
       </div>
+
+      {/* Updates - Desktop only */}
+      {platform.isTauri && (
+        <div className="glass rounded-xl p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            Atualizações
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Versão atual: <span className="text-white font-mono">v{CURRENT_VERSION}</span>
+          </p>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={checkForUpdates}
+              disabled={updateStatus === "checking"}
+              className="px-4 py-2 bg-dark-700 hover:bg-dark-600 border border-dark-600 rounded-lg transition-colors text-gray-300 disabled:opacity-50"
+            >
+              {updateStatus === "checking" ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-gray-600 border-t-gray-300 rounded-full animate-spin" />
+                  verificando...
+                </span>
+              ) : (
+                "verificar atualizações"
+              )}
+            </button>
+
+            {updateStatus === "up-to-date" && (
+              <span className="text-sm text-green-400 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                você está na versão mais recente
+              </span>
+            )}
+
+            {updateStatus === "error" && (
+              <span className="text-sm text-gray-500">
+                erro ao verificar
+              </span>
+            )}
+          </div>
+
+          {updateStatus === "available" && latestVersion && (
+            <div className="mt-4 p-4 bg-dark-800 border border-dark-600 rounded-lg">
+              <p className="text-white text-sm mb-3">
+                nova versão disponível: <span className="font-mono text-green-400">v{latestVersion}</span>
+              </p>
+              <a
+                href={DOWNLOAD_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                baixar atualização
+              </a>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
