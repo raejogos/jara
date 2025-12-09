@@ -27,3 +27,6 @@ npm-debug.log*
 # yt-dlp binary (download separately)
 src-tauri/resources/yt-dlp.exe
 
+# Local notes
+COMANDOS.txt
+
