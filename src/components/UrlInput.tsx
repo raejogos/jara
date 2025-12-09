@@ -3,6 +3,7 @@ import { platform } from "../services/api";
 
 interface UrlInputProps {
   onSubmit: (url: string) => void;
+  onBatchSubmit?: (urls: string[]) => void;
   isLoading: boolean;
   error: string | null;
 }
@@ -52,8 +53,10 @@ function isMobile(): boolean {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-export function UrlInput({ onSubmit, isLoading, error }: UrlInputProps) {
+export function UrlInput({ onSubmit, onBatchSubmit, isLoading, error }: UrlInputProps) {
   const [url, setUrl] = useState("");
+  const [batchUrls, setBatchUrls] = useState("");
+  const [isBatchMode, setIsBatchMode] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [youtubeWarning, setYoutubeWarning] = useState<string | null>(null);
 
@@ -76,24 +79,55 @@ export function UrlInput({ onSubmit, isLoading, error }: UrlInputProps) {
     return () => clearInterval(interval);
   }, [isLoading]);
 
+  // Parse batch URLs and count valid ones
+  const parsedUrls = useMemo(() => {
+    return batchUrls
+      .split("\n")
+      .map((u) => u.trim())
+      .filter((u) => u.length > 0 && (u.startsWith("http://") || u.startsWith("https://")));
+  }, [batchUrls]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setYoutubeWarning(null);
-    
-    const trimmedUrl = url.trim();
-    if (!trimmedUrl) return;
 
-    // Check YouTube restriction for web users
-    if (platform.isWeb && isYouTubeUrl(trimmedUrl)) {
-      if (isMobile()) {
-        setYoutubeWarning("downloads do YouTube não estão disponíveis no celular. acesse pelo computador ou baixe o app desktop.");
-      } else {
-        setYoutubeWarning("para baixar do YouTube, baixe o app desktop do Jara. outros sites funcionam normalmente aqui.");
+    if (isBatchMode) {
+      // Batch mode
+      if (parsedUrls.length === 0) return;
+
+      // Check for YouTube URLs in web mode
+      if (platform.isWeb) {
+        const hasYoutube = parsedUrls.some(isYouTubeUrl);
+        if (hasYoutube) {
+          if (isMobile()) {
+            setYoutubeWarning("downloads do YouTube não estão disponíveis no celular. remova os links do YouTube ou baixe o app desktop.");
+          } else {
+            setYoutubeWarning("alguns links são do YouTube. para baixá-los, use o app desktop. os outros links funcionam normalmente.");
+          }
+          return;
+        }
       }
-      return;
-    }
 
-    onSubmit(trimmedUrl);
+      if (onBatchSubmit) {
+        onBatchSubmit(parsedUrls);
+      }
+    } else {
+      // Single URL mode
+      const trimmedUrl = url.trim();
+      if (!trimmedUrl) return;
+
+      // Check YouTube restriction for web users
+      if (platform.isWeb && isYouTubeUrl(trimmedUrl)) {
+        if (isMobile()) {
+          setYoutubeWarning("downloads do YouTube não estão disponíveis no celular. acesse pelo computador ou baixe o app desktop.");
+        } else {
+          setYoutubeWarning("para baixar do YouTube, baixe o app desktop do Jara. outros sites funcionam normalmente aqui.");
+        }
+        return;
+      }
+
+      onSubmit(trimmedUrl);
+    }
   };
 
   return (
@@ -103,46 +137,113 @@ export function UrlInput({ onSubmit, isLoading, error }: UrlInputProps) {
         {slogan}
       </p>
 
-      <form onSubmit={handleSubmit} className="flex gap-3">
-        <div className="flex-1 relative">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-              />
-            </svg>
+      {/* Mode Toggle */}
+      {onBatchSubmit && (
+        <div className="flex justify-center mb-4">
+          <div className="inline-flex bg-dark-900 border border-dark-700 rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => setIsBatchMode(false)}
+              className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
+                !isBatchMode
+                  ? "bg-dark-700 text-white"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              URL única
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsBatchMode(true)}
+              className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
+                isBatchMode
+                  ? "bg-dark-700 text-white"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              lote
+            </button>
           </div>
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => {
-              setUrl(e.target.value);
-              setYoutubeWarning(null);
-            }}
-            placeholder="cole o link aqui"
-            className="w-full bg-dark-900 border border-dark-600 rounded-xl pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:border-dark-400 focus:bg-dark-800 transition-all font-mono text-sm"
-            disabled={isLoading}
-          />
         </div>
+      )}
 
-        <button
-          type="submit"
-          disabled={isLoading || !url.trim()}
-          className="px-6 py-4 bg-dark-800 border border-dark-600 hover:bg-dark-700 rounded-xl transition-all flex items-center gap-2 text-gray-300 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          <span className="text-sm font-medium">buscar</span>
-        </button>
+      <form onSubmit={handleSubmit} className={isBatchMode ? "space-y-3" : "flex gap-3"}>
+        {isBatchMode ? (
+          <>
+            <div className="relative">
+              <textarea
+                value={batchUrls}
+                onChange={(e) => {
+                  setBatchUrls(e.target.value);
+                  setYoutubeWarning(null);
+                }}
+                placeholder="cole os links aqui (um por linha)"
+                rows={6}
+                className="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-4 text-white placeholder-gray-600 focus:border-dark-400 focus:bg-dark-800 transition-all font-mono text-sm resize-none"
+                disabled={isLoading}
+              />
+              {parsedUrls.length > 0 && (
+                <span className="absolute bottom-3 right-3 text-xs text-gray-500 font-mono">
+                  {parsedUrls.length} {parsedUrls.length === 1 ? "link" : "links"}
+                </span>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading || parsedUrls.length === 0}
+              className="w-full py-4 bg-dark-800 border border-dark-600 hover:bg-dark-700 rounded-xl transition-all flex items-center justify-center gap-2 text-gray-300 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span className="text-sm font-medium">
+                adicionar {parsedUrls.length > 0 ? parsedUrls.length : ""} à fila
+              </span>
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="flex-1 relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                  />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={url}
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  setYoutubeWarning(null);
+                }}
+                placeholder="cole o link aqui"
+                className="w-full bg-dark-900 border border-dark-600 rounded-xl pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:border-dark-400 focus:bg-dark-800 transition-all font-mono text-sm"
+                disabled={isLoading}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading || !url.trim()}
+              className="px-6 py-4 bg-dark-800 border border-dark-600 hover:bg-dark-700 rounded-xl transition-all flex items-center gap-2 text-gray-300 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <span className="text-sm font-medium">buscar</span>
+            </button>
+          </>
+        )}
       </form>
 
       {isLoading && (

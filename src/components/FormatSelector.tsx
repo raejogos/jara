@@ -7,6 +7,10 @@ interface FormatSelectorProps {
   onSelectFormat: (format: VideoFormat | null) => void;
   audioOnly: boolean;
   onAudioOnlyChange: (audioOnly: boolean) => void;
+  downloadSubs?: boolean;
+  onDownloadSubsChange?: (downloadSubs: boolean) => void;
+  subLang?: string;
+  onSubLangChange?: (lang: string) => void;
 }
 
 export function FormatSelector({
@@ -15,6 +19,10 @@ export function FormatSelector({
   onSelectFormat,
   audioOnly,
   onAudioOnlyChange,
+  downloadSubs = false,
+  onDownloadSubsChange,
+  subLang = "pt,en",
+  onSubLangChange,
 }: FormatSelectorProps) {
   // Filter and organize formats
   const { videoFormats, audioFormats } = useMemo(() => {
@@ -174,6 +182,54 @@ export function FormatSelector({
         <p className="mt-4 text-xs text-gray-600">
           O áudio será mesclado automaticamente com o vídeo selecionado.
         </p>
+      )}
+
+      {/* Subtitles section */}
+      {onDownloadSubsChange && !audioOnly && (
+        <div className="mt-6 pt-6 border-t border-dark-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              <span className="text-sm text-gray-400">Baixar legendas</span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {downloadSubs && onSubLangChange && (
+                <select
+                  value={subLang}
+                  onChange={(e) => onSubLangChange(e.target.value)}
+                  className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-1.5 text-sm text-gray-300 focus:border-dark-400"
+                >
+                  <option value="pt,en">Português, Inglês</option>
+                  <option value="pt">Português</option>
+                  <option value="en">Inglês</option>
+                  <option value="es">Espanhol</option>
+                  <option value="all">Todas disponíveis</option>
+                </select>
+              )}
+
+              <div
+                className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${
+                  downloadSubs ? "bg-white" : "bg-dark-600"
+                }`}
+                onClick={() => onDownloadSubsChange(!downloadSubs)}
+              >
+                <div
+                  className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${
+                    downloadSubs ? "translate-x-7 bg-black" : "translate-x-1 bg-gray-400"
+                  }`}
+                />
+              </div>
+            </div>
+          </div>
+          {downloadSubs && (
+            <p className="mt-2 text-xs text-gray-600">
+              As legendas serão embutidas no vídeo quando disponíveis.
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

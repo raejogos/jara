@@ -1,7 +1,7 @@
 use crate::document_convert::DocumentConverter;
 use crate::ffmpeg::FFmpeg;
 use crate::image_convert::ImageConverter;
-use crate::ytdlp::{DownloadProgress, VideoInfo, YtDlp};
+use crate::ytdlp::{DownloadProgress, PlaylistInfo, VideoInfo, YtDlp};
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use tauri::{Emitter, Window};
@@ -33,11 +33,24 @@ pub struct DownloadRequest {
     pub format_id: Option<String>,
     pub output_path: String,
     pub audio_only: bool,
+    #[serde(default)]
+    pub download_subs: bool,
+    pub sub_lang: Option<String>,
 }
 
 #[tauri::command]
 pub async fn get_video_info(url: String) -> Result<VideoInfo, String> {
     get_ytdlp().get_video_info(&url).await
+}
+
+#[tauri::command]
+pub async fn get_playlist_info(url: String) -> Result<PlaylistInfo, String> {
+    get_ytdlp().get_playlist_info(&url).await
+}
+
+#[tauri::command]
+pub async fn is_playlist(url: String) -> Result<bool, String> {
+    Ok(get_ytdlp().is_playlist(&url).await)
 }
 
 #[tauri::command]
@@ -55,6 +68,8 @@ pub async fn start_download(
             request.format_id.as_deref(),
             &request.output_path,
             request.audio_only,
+            request.download_subs,
+            request.sub_lang.as_deref(),
             move |progress: DownloadProgress| {
                 let _ = window.emit("download-progress", &progress);
             },
@@ -85,4 +100,17 @@ pub fn convert_image(input_path: String, output_format: String) -> Result<String
 #[tauri::command]
 pub fn convert_document(input_path: String, output_format: String) -> Result<String, String> {
     get_document_converter().convert(&input_path, &output_format)
+}
+
+#[tauri::command]
+pub fn send_notification(app_handle: tauri::AppHandle, title: String, body: String) -> Result<(), String> {
+    use tauri_plugin_notification::NotificationExt;
+    
+    app_handle
+        .notification()
+        .builder()
+        .title(&title)
+        .body(&body)
+        .show()
+        .map_err(|e| format!("Falha ao enviar notificação: {}", e))
 }

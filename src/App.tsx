@@ -7,38 +7,55 @@ import { DownloadList } from "./components/DownloadList";
 import { Settings } from "./components/Settings";
 import { About } from "./components/About";
 import { ConvertPage } from "./components/ConvertPage";
+import { PlaylistPreview } from "./components/PlaylistPreview";
 import { SupportedServicesButton } from "./components/SupportedServices";
 import { useDownload } from "./hooks/useDownload";
 import { selectDirectory, platform, getDownloadUrl } from "./services/api";
-import type { VideoInfo, VideoFormat, AppSettings } from "./types";
+import type { VideoInfo, VideoFormat, AppSettings, PlaylistInfo } from "./types";
 
 type Tab = "download" | "convert" | "queue" | "settings" | "about";
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>("download");
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
+  const [playlistInfo, setPlaylistInfo] = useState<PlaylistInfo | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<VideoFormat | null>(null);
   const [audioOnly, setAudioOnly] = useState(false);
+  const [downloadSubs, setDownloadSubs] = useState(false);
+  const [subLang, setSubLang] = useState("pt,en");
   const [settings, setSettings] = useState<AppSettings>({
     defaultOutputPath: "",
     preferredAudioFormat: "mp3",
     preferredVideoQuality: "best",
+    notificationsEnabled: true,
   });
 
   const {
     downloads,
     isLoading,
     error,
+    notificationsEnabled,
+    setNotificationsEnabled,
     getVideoInfo,
+    getPlaylistInfo,
+    isPlaylist,
     startDownload,
+    startBatchDownload,
     cancelDownload,
     removeDownload,
     clearCompleted,
   } = useDownload();
 
+  // Sync notifications setting with hook
+  const handleSettingsChange = (newSettings: AppSettings) => {
+    setSettings(newSettings);
+    setNotificationsEnabled(newSettings.notificationsEnabled);
+  };
+
   const handleTabChange = (tab: Tab) => {
     if (tab === "download") {
       setVideoInfo(null);
+      setPlaylistInfo(null);
       setSelectedFormat(null);
       setAudioOnly(false);
     }
@@ -47,10 +64,20 @@ function App() {
 
   const handleUrlSubmit = async (url: string) => {
     setVideoInfo(null);
+    setPlaylistInfo(null);
     setSelectedFormat(null);
+    
     try {
-      const info = await getVideoInfo(url);
-      setVideoInfo(info);
+      // Check if it's a playlist
+      const isPlaylistUrl = await isPlaylist(url);
+      
+      if (isPlaylistUrl) {
+        const info = await getPlaylistInfo(url);
+        setPlaylistInfo(info);
+      } else {
+        const info = await getVideoInfo(url);
+        setVideoInfo(info);
+      }
     } catch {
       // Error is handled by the hook
     }
@@ -63,10 +90,44 @@ function App() {
       videoInfo,
       audioOnly ? null : selectedFormat?.format_id || null,
       outputPath,
-      audioOnly
+      audioOnly,
+      downloadSubs,
+      subLang
     );
 
     setActiveTab("queue");
+  };
+
+  const handleBatchSubmit = async (urls: string[]) => {
+    // For batch, use default path or ask for one
+    const outputPath = settings.defaultOutputPath || (platform.isWeb ? "server" : "");
+    
+    if (!outputPath && platform.isTauri) {
+      // Need to select a folder first
+      const selected = await selectDirectory();
+      if (selected) {
+        await startBatchDownload(urls, selected, false);
+        setActiveTab("queue");
+      }
+    } else {
+      await startBatchDownload(urls, outputPath, false);
+      setActiveTab("queue");
+    }
+  };
+
+  const handlePlaylistDownload = async (urls: string[]) => {
+    const outputPath = settings.defaultOutputPath || (platform.isWeb ? "server" : "");
+    
+    if (!outputPath && platform.isTauri) {
+      const selected = await selectDirectory();
+      if (selected) {
+        await startBatchDownload(urls, selected, audioOnly);
+        setActiveTab("queue");
+      }
+    } else {
+      await startBatchDownload(urls, outputPath, audioOnly);
+      setActiveTab("queue");
+    }
   };
 
   const activeDownloadsCount = downloads.filter(
@@ -91,7 +152,7 @@ function App() {
             <div className="h-full overflow-y-auto">
               <div className="min-h-full flex flex-col items-center justify-center p-8 animate-fade-in">
                 <div className="w-full max-w-2xl space-y-6 pb-8">
-                  <UrlInput onSubmit={handleUrlSubmit} isLoading={isLoading} error={error} />
+                  <UrlInput onSubmit={handleUrlSubmit} onBatchSubmit={handleBatchSubmit} isLoading={isLoading} error={error} />
 
                   {videoInfo && (
                     <div className="space-y-6 animate-slide-up">
@@ -103,12 +164,26 @@ function App() {
                         onSelectFormat={setSelectedFormat}
                         audioOnly={audioOnly}
                         onAudioOnlyChange={setAudioOnly}
+                        downloadSubs={downloadSubs}
+                        onDownloadSubsChange={setDownloadSubs}
+                        subLang={subLang}
+                        onSubLangChange={setSubLang}
                       />
 
                       <DownloadButton
                         onDownload={handleDownload}
                         defaultPath={settings.defaultOutputPath}
                         disabled={!videoInfo}
+                      />
+                    </div>
+                  )}
+
+                  {playlistInfo && (
+                    <div className="space-y-6 animate-slide-up">
+                      <PlaylistPreview
+                        playlist={playlistInfo}
+                        onDownloadSelected={handlePlaylistDownload}
+                        isDownloading={isLoading}
                       />
                     </div>
                   )}
@@ -138,7 +213,7 @@ function App() {
 
         {activeTab === "settings" && (
           <div className="h-full p-8 overflow-y-auto animate-fade-in">
-            <Settings settings={settings} onSettingsChange={setSettings} />
+            <Settings settings={settings} onSettingsChange={handleSettingsChange} />
           </div>
         )}
 

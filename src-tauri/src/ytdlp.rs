@@ -45,6 +45,25 @@ pub struct DownloadProgress {
     pub filename: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlaylistEntry {
+    pub id: String,
+    pub title: String,
+    pub url: String,
+    pub duration: Option<f64>,
+    pub duration_string: Option<String>,
+    pub thumbnail: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlaylistInfo {
+    pub id: String,
+    pub title: String,
+    pub uploader: Option<String>,
+    pub entries: Vec<PlaylistEntry>,
+    pub entry_count: usize,
+}
+
 pub struct YtDlp {
     exe_path: PathBuf,
     active_downloads: Arc<Mutex<HashMap<String, tokio::process::Child>>>,
@@ -73,6 +92,62 @@ impl YtDlp {
 
         // Fallback to system PATH
         PathBuf::from("yt-dlp")
+    }
+
+    // Check if URL is a playlist
+    pub async fn is_playlist(&self, url: &str) -> bool {
+        url.contains("playlist") || url.contains("list=")
+    }
+
+    pub async fn get_playlist_info(&self, url: &str) -> Result<PlaylistInfo, String> {
+        let output = Command::new(&self.exe_path)
+            .args([
+                "--flat-playlist",
+                "--dump-json",
+                "--no-warnings",
+                "--no-check-certificates",
+                url
+            ])
+            .output()
+            .await
+            .map_err(|e| format!("Falha ao executar yt-dlp: {}", e))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("yt-dlp error: {}", stderr));
+        }
+
+        let json_str = String::from_utf8_lossy(&output.stdout);
+        let raw: serde_json::Value =
+            serde_json::from_str(&json_str).map_err(|e| format!("Falha ao parsear JSON: {}", e))?;
+
+        let entries: Vec<PlaylistEntry> = raw["entries"]
+            .as_array()
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|e| {
+                        Some(PlaylistEntry {
+                            id: e["id"].as_str().unwrap_or("").to_string(),
+                            title: e["title"].as_str().unwrap_or("Sem título").to_string(),
+                            url: e["url"].as_str().or(e["webpage_url"].as_str()).unwrap_or("").to_string(),
+                            duration: e["duration"].as_f64(),
+                            duration_string: e["duration_string"].as_str().map(String::from),
+                            thumbnail: e["thumbnail"].as_str().map(String::from),
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let entry_count = entries.len();
+
+        Ok(PlaylistInfo {
+            id: raw["id"].as_str().unwrap_or("").to_string(),
+            title: raw["title"].as_str().unwrap_or("Playlist").to_string(),
+            uploader: raw["uploader"].as_str().map(String::from),
+            entries,
+            entry_count,
+        })
     }
 
     pub async fn get_video_info(&self, url: &str) -> Result<VideoInfo, String> {
@@ -141,6 +216,8 @@ impl YtDlp {
         format_id: Option<&str>,
         output_path: &str,
         audio_only: bool,
+        download_subs: bool,
+        sub_lang: Option<&str>,
         on_progress: F,
     ) -> Result<(), String>
     where
@@ -162,6 +239,19 @@ impl YtDlp {
         } else if let Some(fmt) = format_id {
             args.push("-f".to_string());
             args.push(fmt.to_string());
+        }
+
+        // Subtitle options
+        if download_subs {
+            args.push("--write-subs".to_string());
+            args.push("--embed-subs".to_string());
+            if let Some(lang) = sub_lang {
+                args.push("--sub-lang".to_string());
+                args.push(lang.to_string());
+            } else {
+                args.push("--sub-lang".to_string());
+                args.push("pt,en".to_string());
+            }
         }
 
         args.push(url.to_string());

@@ -52,11 +52,31 @@ export interface DownloadRequest {
   format_id: string | null;
   output_path: string;
   audio_only: boolean;
+  download_subs?: boolean;
+  sub_lang?: string;
+}
+
+export interface PlaylistEntry {
+  id: string;
+  title: string;
+  url: string;
+  duration: number | null;
+  duration_string: string | null;
+  thumbnail: string | null;
+}
+
+export interface PlaylistInfo {
+  id: string;
+  title: string;
+  uploader: string | null;
+  entries: PlaylistEntry[];
+  entry_count: number;
 }
 
 export interface AppSettings {
   defaultOutputPath: string;
   preferredAudioFormat: string;
   preferredVideoQuality: string;
+  notificationsEnabled: boolean;
 }
 

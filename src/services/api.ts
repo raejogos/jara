@@ -1,5 +1,5 @@
 // API abstraction layer - works with both Tauri and Web
-import type { VideoInfo, DownloadProgress } from "../types";
+import type { VideoInfo, DownloadProgress, PlaylistInfo } from "../types";
 
 const IS_TAURI = typeof window !== "undefined" && "__TAURI__" in window;
 const API_BASE = import.meta.env.VITE_API_URL || "";
@@ -35,12 +35,42 @@ export async function getVideoInfo(url: string): Promise<VideoInfo> {
   }
 }
 
+export async function isPlaylist(url: string): Promise<boolean> {
+  if (IS_TAURI) {
+    await loadTauri();
+    return invoke!("is_playlist", { url }) as Promise<boolean>;
+  } else {
+    // Simple URL check for web
+    return url.includes("playlist") || url.includes("list=");
+  }
+}
+
+export async function getPlaylistInfo(url: string): Promise<PlaylistInfo> {
+  if (IS_TAURI) {
+    await loadTauri();
+    return invoke!("get_playlist_info", { url }) as Promise<PlaylistInfo>;
+  } else {
+    const response = await fetch(`${API_BASE}/api/playlist-info`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Failed to get playlist info");
+    }
+    return response.json();
+  }
+}
+
 export async function startDownload(
   url: string,
   formatId: string | null,
   outputPath: string,
   audioOnly: boolean,
-  onProgress: (progress: DownloadProgress) => void
+  onProgress: (progress: DownloadProgress) => void,
+  downloadSubs: boolean = false,
+  subLang?: string
 ): Promise<string> {
   if (IS_TAURI) {
     await loadTauri();
@@ -59,6 +89,8 @@ export async function startDownload(
           format_id: formatId,
           output_path: outputPath,
           audio_only: audioOnly,
+          download_subs: downloadSubs,
+          sub_lang: subLang,
         },
       });
     } finally {
@@ -169,4 +201,41 @@ export const platform = {
   isTauri: IS_TAURI,
   isWeb: !IS_TAURI,
 };
+
+// Notifications
+export async function sendNotification(title: string, body: string): Promise<void> {
+  if (IS_TAURI) {
+    await loadTauri();
+    await invoke!("send_notification", { title, body });
+  } else {
+    // Web notification
+    if ("Notification" in window) {
+      if (Notification.permission === "granted") {
+        new Notification(title, { body });
+      } else if (Notification.permission !== "denied") {
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+          new Notification(title, { body });
+        }
+      }
+    }
+  }
+}
+
+export async function requestNotificationPermission(): Promise<boolean> {
+  if (IS_TAURI) {
+    // Tauri notifications don't need explicit permission on most platforms
+    return true;
+  } else {
+    if ("Notification" in window) {
+      if (Notification.permission === "granted") {
+        return true;
+      } else if (Notification.permission !== "denied") {
+        const permission = await Notification.requestPermission();
+        return permission === "granted";
+      }
+    }
+    return false;
+  }
+}
 

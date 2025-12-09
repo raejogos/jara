@@ -94,6 +94,68 @@ app.post('/api/video-info', async (req, res) => {
   }
 });
 
+// Get playlist info
+app.post('/api/playlist-info', async (req, res) => {
+  const { url } = req.body;
+  
+  if (!url) {
+    return res.status(400).json({ error: 'URL is required' });
+  }
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const ytdlp = spawn('yt-dlp', [
+        '--flat-playlist',
+        '--dump-json',
+        '--no-warnings',
+        url
+      ]);
+
+      let stdout = '';
+      let stderr = '';
+
+      ytdlp.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      ytdlp.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      ytdlp.on('close', (code) => {
+        if (code === 0) {
+          try {
+            const info = JSON.parse(stdout);
+            const entries = (info.entries || []).map(e => ({
+              id: e.id,
+              title: e.title || 'Sem título',
+              url: e.url || e.webpage_url || '',
+              duration: e.duration,
+              duration_string: e.duration_string,
+              thumbnail: e.thumbnail,
+            }));
+            resolve({
+              id: info.id,
+              title: info.title || 'Playlist',
+              uploader: info.uploader,
+              entries,
+              entry_count: entries.length,
+            });
+          } catch (e) {
+            reject(new Error('Failed to parse playlist info'));
+          }
+        } else {
+          reject(new Error(stderr || 'Failed to get playlist info'));
+        }
+      });
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Start download
 app.post('/api/download', async (req, res) => {
   const { url, format_id, audio_only } = req.body;
