@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { platform } from "../services/api";
 
 interface UrlInputProps {
   onSubmit: (url: string) => void;
@@ -35,9 +36,26 @@ const loadingMessages = [
   "conectando",
 ];
 
+// Check if URL is from YouTube
+function isYouTubeUrl(url: string): boolean {
+  const ytPatterns = [
+    /^(https?:\/\/)?(www\.)?youtube\.com/i,
+    /^(https?:\/\/)?(www\.)?youtu\.be/i,
+    /^(https?:\/\/)?(music\.)?youtube\.com/i,
+    /^(https?:\/\/)?m\.youtube\.com/i,
+  ];
+  return ytPatterns.some(pattern => pattern.test(url));
+}
+
+// Check if user is on mobile
+function isMobile(): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 export function UrlInput({ onSubmit, isLoading, error }: UrlInputProps) {
   const [url, setUrl] = useState("");
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [youtubeWarning, setYoutubeWarning] = useState<string | null>(null);
 
   // Random slogan on mount
   const slogan = useMemo(() => {
@@ -60,9 +78,22 @@ export function UrlInput({ onSubmit, isLoading, error }: UrlInputProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (url.trim()) {
-      onSubmit(url.trim());
+    setYoutubeWarning(null);
+    
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) return;
+
+    // Check YouTube restriction for web users
+    if (platform.isWeb && isYouTubeUrl(trimmedUrl)) {
+      if (isMobile()) {
+        setYoutubeWarning("downloads do YouTube não estão disponíveis no celular. acesse pelo computador ou baixe o app desktop.");
+      } else {
+        setYoutubeWarning("para baixar do YouTube, baixe o app desktop do Jara. outros sites funcionam normalmente aqui.");
+      }
+      return;
     }
+
+    onSubmit(trimmedUrl);
   };
 
   return (
@@ -87,7 +118,10 @@ export function UrlInput({ onSubmit, isLoading, error }: UrlInputProps) {
           <input
             type="text"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setYoutubeWarning(null);
+            }}
             placeholder="cole o link aqui"
             className="w-full bg-dark-900 border border-dark-600 rounded-xl pl-12 pr-4 py-4 text-white placeholder-gray-600 focus:border-dark-400 focus:bg-dark-800 transition-all font-mono text-sm"
             disabled={isLoading}
@@ -118,7 +152,26 @@ export function UrlInput({ onSubmit, isLoading, error }: UrlInputProps) {
         </div>
       )}
 
-      {error && (
+      {youtubeWarning && (
+        <div className="mt-4 p-4 bg-dark-800 border border-dark-600 rounded-lg animate-fade-in">
+          <p className="text-gray-300 text-sm mb-3">{youtubeWarning}</p>
+          {!isMobile() && (
+            <a
+              href="https://github.com/raejogos/jara/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-xs text-white bg-dark-700 hover:bg-dark-600 px-4 py-2 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              baixar app desktop
+            </a>
+          )}
+        </div>
+      )}
+
+      {error && !youtubeWarning && (
         <div className="mt-4 p-4 bg-dark-800 border border-dark-600 rounded-lg text-gray-400 text-sm">
           <p>{error}</p>
         </div>
