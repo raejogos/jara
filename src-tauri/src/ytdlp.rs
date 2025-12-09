@@ -1,12 +1,30 @@
+use futures_util::StreamExt;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::Arc;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
+
+const YTDLP_DOWNLOAD_URL: &str = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
+
+// Windows: hide console window
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+// Helper to create command with hidden window on Windows
+fn create_hidden_command(program: &PathBuf) -> Command {
+    let mut cmd = Command::new(program);
+    #[cfg(windows)]
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VideoInfo {
@@ -79,19 +97,96 @@ impl YtDlp {
     }
 
     fn find_ytdlp_path() -> PathBuf {
-        // First try to find bundled yt-dlp in resources
+        // First try to find bundled yt-dlp next to the executable
         if let Ok(exe_path) = std::env::current_exe() {
-            let resources_path = exe_path
-                .parent()
-                .map(|p| p.join("yt-dlp.exe"))
-                .unwrap_or_default();
-            if resources_path.exists() {
-                return resources_path;
+            if let Some(exe_dir) = exe_path.parent() {
+                let ytdlp_path = exe_dir.join("yt-dlp.exe");
+                if ytdlp_path.exists() {
+                    return ytdlp_path;
+                }
+            }
+        }
+
+        // Try app data directory
+        if let Some(data_dir) = dirs::data_local_dir() {
+            let ytdlp_path = data_dir.join("Jara").join("yt-dlp.exe");
+            if ytdlp_path.exists() {
+                return ytdlp_path;
             }
         }
 
         // Fallback to system PATH
         PathBuf::from("yt-dlp")
+    }
+
+    fn get_download_path() -> PathBuf {
+        // Prefer app data directory for downloads
+        if let Some(data_dir) = dirs::data_local_dir() {
+            let jara_dir = data_dir.join("Jara");
+            if std::fs::create_dir_all(&jara_dir).is_ok() {
+                return jara_dir.join("yt-dlp.exe");
+            }
+        }
+
+        // Fallback to next to executable
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                return exe_dir.join("yt-dlp.exe");
+            }
+        }
+
+        PathBuf::from("yt-dlp.exe")
+    }
+
+    pub async fn ensure_ytdlp_exists(&mut self) -> Result<(), String> {
+        // Check if yt-dlp already works
+        let test = create_hidden_command(&self.exe_path)
+            .arg("--version")
+            .output()
+            .await;
+
+        if test.is_ok() && test.unwrap().status.success() {
+            return Ok(());
+        }
+
+        // Need to download yt-dlp
+        println!("yt-dlp não encontrado, baixando...");
+        
+        let download_path = Self::get_download_path();
+        
+        // Download yt-dlp
+        let response = reqwest::get(YTDLP_DOWNLOAD_URL)
+            .await
+            .map_err(|e| format!("Falha ao baixar yt-dlp: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Falha ao baixar yt-dlp: HTTP {}", response.status()));
+        }
+
+        // Create parent directory if needed
+        if let Some(parent) = download_path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Falha ao criar diretório: {}", e))?;
+        }
+
+        // Write to file
+        let mut file = tokio::fs::File::create(&download_path)
+            .await
+            .map_err(|e| format!("Falha ao criar arquivo: {}", e))?;
+
+        let mut stream = response.bytes_stream();
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|e| format!("Erro ao baixar: {}", e))?;
+            file.write_all(&chunk)
+                .await
+                .map_err(|e| format!("Erro ao escrever: {}", e))?;
+        }
+
+        // Update exe_path
+        self.exe_path = download_path;
+        println!("yt-dlp baixado com sucesso!");
+
+        Ok(())
     }
 
     // Check if URL is a playlist
@@ -100,7 +195,7 @@ impl YtDlp {
     }
 
     pub async fn get_playlist_info(&self, url: &str) -> Result<PlaylistInfo, String> {
-        let output = Command::new(&self.exe_path)
+        let output = create_hidden_command(&self.exe_path)
             .args([
                 "--flat-playlist",
                 "--dump-json",
@@ -151,7 +246,7 @@ impl YtDlp {
     }
 
     pub async fn get_video_info(&self, url: &str) -> Result<VideoInfo, String> {
-        let output = Command::new(&self.exe_path)
+        let output = create_hidden_command(&self.exe_path)
             .args([
                 "--dump-json",
                 "--no-playlist",
@@ -256,7 +351,7 @@ impl YtDlp {
 
         args.push(url.to_string());
 
-        let mut child = Command::new(&self.exe_path)
+        let mut child = create_hidden_command(&self.exe_path)
             .args(&args)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

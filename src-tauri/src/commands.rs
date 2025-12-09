@@ -6,13 +6,15 @@ use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use tauri::{Emitter, Window};
 
-static YTDLP: OnceLock<YtDlp> = OnceLock::new();
+use tokio::sync::Mutex as TokioMutex;
+
+static YTDLP: OnceLock<TokioMutex<YtDlp>> = OnceLock::new();
 static FFMPEG: OnceLock<FFmpeg> = OnceLock::new();
 static IMAGE_CONVERTER: OnceLock<ImageConverter> = OnceLock::new();
 static DOCUMENT_CONVERTER: OnceLock<DocumentConverter> = OnceLock::new();
 
-fn get_ytdlp() -> &'static YtDlp {
-    YTDLP.get_or_init(YtDlp::new)
+fn get_ytdlp() -> &'static TokioMutex<YtDlp> {
+    YTDLP.get_or_init(|| TokioMutex::new(YtDlp::new()))
 }
 
 fn get_ffmpeg() -> &'static FFmpeg {
@@ -40,17 +42,22 @@ pub struct DownloadRequest {
 
 #[tauri::command]
 pub async fn get_video_info(url: String) -> Result<VideoInfo, String> {
-    get_ytdlp().get_video_info(&url).await
+    let mut ytdlp = get_ytdlp().lock().await;
+    ytdlp.ensure_ytdlp_exists().await?;
+    ytdlp.get_video_info(&url).await
 }
 
 #[tauri::command]
 pub async fn get_playlist_info(url: String) -> Result<PlaylistInfo, String> {
-    get_ytdlp().get_playlist_info(&url).await
+    let mut ytdlp = get_ytdlp().lock().await;
+    ytdlp.ensure_ytdlp_exists().await?;
+    ytdlp.get_playlist_info(&url).await
 }
 
 #[tauri::command]
 pub async fn is_playlist(url: String) -> Result<bool, String> {
-    Ok(get_ytdlp().is_playlist(&url).await)
+    let ytdlp = get_ytdlp().lock().await;
+    Ok(ytdlp.is_playlist(&url).await)
 }
 
 #[tauri::command]
@@ -59,7 +66,8 @@ pub async fn start_download(
     download_id: String,
     request: DownloadRequest,
 ) -> Result<(), String> {
-    let ytdlp = get_ytdlp();
+    let mut ytdlp = get_ytdlp().lock().await;
+    ytdlp.ensure_ytdlp_exists().await?;
 
     ytdlp
         .start_download(
@@ -79,7 +87,8 @@ pub async fn start_download(
 
 #[tauri::command]
 pub async fn cancel_download(download_id: String) -> Result<(), String> {
-    get_ytdlp().cancel_download(&download_id).await
+    let ytdlp = get_ytdlp().lock().await;
+    ytdlp.cancel_download(&download_id).await
 }
 
 #[tauri::command]

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { UrlInput } from "./components/UrlInput";
 import { VideoPreview } from "./components/VideoPreview";
@@ -11,6 +11,7 @@ import { PlaylistPreview } from "./components/PlaylistPreview";
 import { SupportedServicesButton } from "./components/SupportedServices";
 import { useDownload } from "./hooks/useDownload";
 import { selectDirectory, platform, getDownloadUrl } from "./services/api";
+import { loadSettings, saveSettings } from "./services/storage";
 import type { VideoInfo, VideoFormat, AppSettings, PlaylistInfo } from "./types";
 
 type Tab = "download" | "convert" | "queue" | "settings" | "about";
@@ -23,12 +24,23 @@ function App() {
   const [audioOnly, setAudioOnly] = useState(false);
   const [downloadSubs, setDownloadSubs] = useState(false);
   const [subLang, setSubLang] = useState("pt,en");
-  const [settings, setSettings] = useState<AppSettings>({
-    defaultOutputPath: "",
-    preferredAudioFormat: "mp3",
-    preferredVideoQuality: "best",
-    notificationsEnabled: true,
-  });
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings().then((loaded) => {
+      setSettings(loaded);
+      setSettingsLoaded(true);
+    });
+  }, []);
+
+  // Save settings when they change
+  useEffect(() => {
+    if (settingsLoaded && settings) {
+      saveSettings(settings);
+    }
+  }, [settings, settingsLoaded]);
 
   const {
     downloads,
@@ -99,7 +111,7 @@ function App() {
 
   const handleBatchSubmit = async (urls: string[]) => {
     // For batch, use default path or ask for one
-    const outputPath = settings.defaultOutputPath || (platform.isWeb ? "server" : "");
+    const outputPath = settings?.defaultOutputPath || (platform.isWeb ? "server" : "");
     
     if (!outputPath && platform.isTauri) {
       // Need to select a folder first
@@ -115,7 +127,7 @@ function App() {
   };
 
   const handlePlaylistDownload = async (urls: string[]) => {
-    const outputPath = settings.defaultOutputPath || (platform.isWeb ? "server" : "");
+    const outputPath = settings?.defaultOutputPath || (platform.isWeb ? "server" : "");
     
     if (!outputPath && platform.isTauri) {
       const selected = await selectDirectory();
@@ -171,7 +183,7 @@ function App() {
 
                       <DownloadButton
                         onDownload={handleDownload}
-                        defaultPath={settings.defaultOutputPath}
+                        defaultPath={settings?.defaultOutputPath || ""}
                         disabled={!videoInfo}
                       />
                     </div>
@@ -212,7 +224,13 @@ function App() {
 
         {activeTab === "settings" && (
           <div className="h-full p-8 overflow-y-auto animate-fade-in">
-            <Settings settings={settings} onSettingsChange={handleSettingsChange} />
+            {settings ? (
+              <Settings settings={settings} onSettingsChange={handleSettingsChange} />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="w-6 h-6 border-2 border-gray-600 border-t-gray-400 rounded-full animate-spin" />
+              </div>
+            )}
           </div>
         )}
 
