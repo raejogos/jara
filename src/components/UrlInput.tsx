@@ -157,9 +157,7 @@ export function UrlInput({ onSubmit, isLoading, error }: UrlInputProps) {
           <p className="text-gray-300 text-sm mb-3">{youtubeWarning}</p>
           {!isMobile() && (
             <a
-              href="https://github.com/raejogos/jara/releases"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="https://github.com/raejogos/jara/releases/download/v1.0.0/Jara_1.0.0_x64-setup.exe"
               className="inline-flex items-center gap-2 text-xs text-white bg-dark-700 hover:bg-dark-600 px-4 py-2 rounded-lg transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
