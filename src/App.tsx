@@ -34,7 +34,6 @@ function App() {
     downloads,
     isLoading,
     error,
-    notificationsEnabled,
     setNotificationsEnabled,
     getVideoInfo,
     getPlaylistInfo,
