@@ -258,7 +258,7 @@ export function ConvertPage() {
             </p>
             {!platform.isTauri && category === "media" && (
               <p className="text-gray-700 text-xs mt-2 font-mono">
-                ⚡ processamento local no seu navegador
+                processamento local no seu navegador
               </p>
             )}
           </div>
