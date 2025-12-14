@@ -19,6 +19,15 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    rollupOptions: {
+      external: [
+        "@tauri-apps/plugin-fs",
+        "@tauri-apps/api",
+        "@tauri-apps/plugin-shell",
+        "@tauri-apps/plugin-dialog",
+        "@tauri-apps/plugin-notification",
+      ],
+    },
   },
 });
 
