@@ -23,7 +23,7 @@ export function Settings({ settings, onSettingsChange }: SettingsProps) {
       const data = await response.json();
       const latest = data.tag_name?.replace("v", "") || data.name;
       setLatestVersion(latest);
-      
+
       if (latest && latest !== CURRENT_VERSION) {
         setUpdateStatus("available");
       } else {
@@ -54,41 +54,43 @@ export function Settings({ settings, onSettingsChange }: SettingsProps) {
     <div className="max-w-2xl mx-auto space-y-6">
       <h2 className="text-2xl font-bold mb-6 text-white">Configurações</h2>
 
-      {/* Default output path */}
-      <div className="glass rounded-xl p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200">
-          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-            />
-          </svg>
-          Pasta Padrão de Downloads
-        </h3>
-        <p className="text-sm text-gray-500 mb-4">
-          Defina a pasta onde os downloads serão salvos por padrão.
-        </p>
+      {/* Default output path - Desktop only */}
+      {platform.isTauri && (
+        <div className="glass rounded-xl p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+              />
+            </svg>
+            Pasta Padrão de Downloads
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Defina a pasta onde os downloads serão salvos por padrão.
+          </p>
 
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={settings.defaultOutputPath}
-            onChange={(e) =>
-              onSettingsChange({ ...settings, defaultOutputPath: e.target.value })
-            }
-            placeholder="Selecione ou digite o caminho..."
-            className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:border-dark-400 transition-colors"
-          />
-          <button
-            onClick={handleSelectDefaultFolder}
-            className="px-4 py-3 bg-dark-700 hover:bg-dark-600 border border-dark-600 rounded-lg transition-colors text-gray-300"
-          >
-            Procurar
-          </button>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={settings.defaultOutputPath}
+              onChange={(e) =>
+                onSettingsChange({ ...settings, defaultOutputPath: e.target.value })
+              }
+              placeholder="Selecione ou digite o caminho..."
+              className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:border-dark-400 transition-colors"
+            />
+            <button
+              onClick={handleSelectDefaultFolder}
+              className="px-4 py-3 bg-dark-700 hover:bg-dark-600 border border-dark-600 rounded-lg transition-colors text-gray-300"
+            >
+              Procurar
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Audio format */}
       <div className="glass rounded-xl p-6">
@@ -114,11 +116,10 @@ export function Settings({ settings, onSettingsChange }: SettingsProps) {
               onClick={() =>
                 onSettingsChange({ ...settings, preferredAudioFormat: format })
               }
-              className={`px-4 py-2 rounded-lg border transition-all ${
-                settings.preferredAudioFormat === format
+              className={`px-4 py-2 rounded-lg border transition-all ${settings.preferredAudioFormat === format
                   ? "border-white bg-white text-black"
                   : "border-dark-600 bg-dark-800 text-gray-400 hover:border-dark-500"
-              }`}
+                }`}
             >
               {format.toUpperCase()}
             </button>
@@ -155,11 +156,10 @@ export function Settings({ settings, onSettingsChange }: SettingsProps) {
               onClick={() =>
                 onSettingsChange({ ...settings, preferredVideoQuality: quality.id })
               }
-              className={`px-4 py-2 rounded-lg border transition-all ${
-                settings.preferredVideoQuality === quality.id
+              className={`px-4 py-2 rounded-lg border transition-all ${settings.preferredVideoQuality === quality.id
                   ? "border-white bg-white text-black"
                   : "border-dark-600 bg-dark-800 text-gray-400 hover:border-dark-500"
-              }`}
+                }`}
             >
               {quality.label}
             </button>
@@ -187,15 +187,13 @@ export function Settings({ settings, onSettingsChange }: SettingsProps) {
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-400">Notificar ao concluir download</span>
           <div
-            className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${
-              settings.notificationsEnabled ? "bg-white" : "bg-dark-600"
-            }`}
+            className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${settings.notificationsEnabled ? "bg-white" : "bg-dark-600"
+              }`}
             onClick={() => onSettingsChange({ ...settings, notificationsEnabled: !settings.notificationsEnabled })}
           >
             <div
-              className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${
-                settings.notificationsEnabled ? "translate-x-7 bg-black" : "translate-x-1 bg-gray-400"
-              }`}
+              className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${settings.notificationsEnabled ? "translate-x-7 bg-black" : "translate-x-1 bg-gray-400"
+                }`}
             />
           </div>
         </div>

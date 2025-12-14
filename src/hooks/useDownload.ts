@@ -15,7 +15,7 @@ export function useDownload() {
     if (!platform.isTauri) return;
 
     let unlisten: (() => void) | null = null;
-    
+
     (async () => {
       const { listen } = await import("@tauri-apps/api/event");
       unlisten = await listen<DownloadProgress>("download-progress", (event) => {
@@ -24,12 +24,12 @@ export function useDownload() {
           prev.map((item) =>
             item.id === progress.download_id
               ? {
-                  ...item,
-                  progress: progress.progress,
-                  speed: progress.speed,
-                  eta: progress.eta,
-                  status: progress.status as DownloadItem["status"],
-                }
+                ...item,
+                progress: progress.progress,
+                speed: progress.speed,
+                eta: progress.eta,
+                status: progress.status as DownloadItem["status"],
+              }
               : item
           )
         );
@@ -131,7 +131,7 @@ export function useDownload() {
           )
         );
 
-        await apiStartDownload(
+        const serverDownloadId = await apiStartDownload(
           url,
           formatId,
           outputPath,
@@ -139,20 +139,27 @@ export function useDownload() {
           (progress) => {
             setDownloads((prev) =>
               prev.map((item) =>
-                item.id === progress.download_id
+                item.id === serverDownloadId
                   ? {
-                      ...item,
-                      progress: progress.progress,
-                      speed: progress.speed,
-                      eta: progress.eta,
-                      status: progress.status as DownloadItem["status"],
-                    }
+                    ...item,
+                    progress: progress.progress,
+                    speed: progress.speed,
+                    eta: progress.eta,
+                    status: progress.status as DownloadItem["status"],
+                  }
                   : item
               )
             );
           },
           downloadSubs,
           subLang
+        );
+
+        // Update the download item with the server's ID
+        setDownloads((prev) =>
+          prev.map((item) =>
+            item.id === downloadId ? { ...item, id: serverDownloadId } : item
+          )
         );
       } catch (e) {
         const errorMsg = e instanceof Error ? e.message : String(e);
@@ -224,7 +231,7 @@ export function useDownload() {
           try {
             // Get video info
             const info = await fetchVideoInfo(url);
-            
+
             // Update with real info
             setDownloads((prev) =>
               prev.map((item) =>
@@ -235,7 +242,7 @@ export function useDownload() {
             );
 
             // Start download
-            await apiStartDownload(
+            const serverDownloadId = await apiStartDownload(
               url,
               null, // Best quality
               outputPath,
@@ -243,18 +250,25 @@ export function useDownload() {
               (progress) => {
                 setDownloads((prev) =>
                   prev.map((item) =>
-                    item.id === progress.download_id
+                    item.id === serverDownloadId
                       ? {
-                          ...item,
-                          progress: progress.progress,
-                          speed: progress.speed,
-                          eta: progress.eta,
-                          status: progress.status as DownloadItem["status"],
-                        }
+                        ...item,
+                        progress: progress.progress,
+                        speed: progress.speed,
+                        eta: progress.eta,
+                        status: progress.status as DownloadItem["status"],
+                      }
                       : item
                   )
                 );
               }
+            );
+
+            // Update the download item with the server's ID
+            setDownloads((prev) =>
+              prev.map((item) =>
+                item.id === downloadId ? { ...item, id: serverDownloadId } : item
+              )
             );
           } catch (e) {
             const errorMsg = e instanceof Error ? e.message : String(e);

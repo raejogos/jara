@@ -2,41 +2,51 @@ export function About() {
   return (
     <div className="h-full flex items-center justify-center">
       <div className="text-center max-w-md">
-        {/* Logo - will use custom icon from assets */}
-        <div className="w-20 h-20 rounded-2xl bg-dark-800 border border-dark-700 flex items-center justify-center mx-auto mb-6 overflow-hidden">
-          <img 
-            src="/icon.png" 
-            alt="Jara" 
-            className="w-12 h-12 object-contain"
-            onError={(e) => {
-              // Fallback if icon doesn't exist
-              e.currentTarget.style.display = 'none';
-              e.currentTarget.parentElement!.innerHTML = `
-                <svg class="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              `;
-            }}
+        {/* Logo + Nome */}
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <img
+            src="/icon.png"
+            alt="Jara"
+            className="w-20 h-20 object-contain"
           />
+          <h1
+            className="text-4xl text-white"
+            style={{ fontFamily: "'Press Start 2P', cursive" }}
+          >
+            jara
+          </h1>
         </div>
 
-        <h1 className="text-2xl font-bold text-white mb-2">Jara</h1>
-
         {/* Version */}
-        <p className="text-gray-500 text-sm mb-8">v1.0.0</p>
+        <p className="text-gray-500 text-sm mb-6">v1.1.0</p>
 
         {/* Description */}
-        <p className="text-gray-400 mb-8">
-          interface gráfica para{" "}
-          <a
-            href="https://github.com/yt-dlp/yt-dlp"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-white hover:underline"
-          >
-            yt-dlp
-          </a>
-        </p>
+        <div className="text-gray-400 mb-8 space-y-2">
+          <p>sua capivara de downloads favorita</p>
+          <p className="text-gray-600 text-sm">
+            (na real é só uma interface bonita pro{" "}
+            <a
+              href="https://github.com/yt-dlp/yt-dlp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white hover:underline"
+            >
+              yt-dlp
+            </a>
+            )
+          </p>
+        </div>
+
+        {/* Fun facts */}
+        <div className="bg-dark-800 border border-dark-700 rounded-xl p-4 mb-8 text-left">
+          <p className="text-gray-500 text-xs uppercase tracking-wider mb-3">informações legalmente necessárias</p>
+          <ul className="text-gray-400 text-sm space-y-2">
+            <li>• pirataria é bacana</li>
+            <li>• downloads 100% locais (a gente nem quer saber)</li>
+            <li>• a capivara não é real, pode relaxar</li>
+            <li>• isso aqui é só um wrapper glorificado</li>
+          </ul>
+        </div>
 
         {/* Links */}
         <div className="space-y-3">
@@ -48,20 +58,20 @@ export function About() {
           >
             sites suportados
           </a>
-          
+
           <a
-            href="https://github.com/yt-dlp/yt-dlp"
+            href="https://github.com/raejogos/jara"
             target="_blank"
             rel="noopener noreferrer"
             className="block px-4 py-3 bg-dark-800 border border-dark-700 rounded-xl text-gray-300 hover:bg-dark-700 hover:text-white transition-colors"
           >
-            yt-dlp no github
+            ver código fonte
           </a>
         </div>
 
         {/* Footer */}
         <p className="text-gray-600 text-xs mt-12">
-          construído com tauri + react
+          tauri + react + tempo livre mal investido
         </p>
       </div>
     </div>

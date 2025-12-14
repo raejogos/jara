@@ -9,21 +9,36 @@ interface UrlInputProps {
 }
 
 const slogans = [
-  "baixa isso aí rapidinho",
   "salva antes que suma",
   "offline é o novo online",
-  "guarda pra ver depois",
-  "backup nunca é demais",
-  "colecione memórias",
-  "eu vou fazer uma oferta irrecusável",
-  "houston, temos um download",
-  "que a força esteja com você",
-  "eu voltarei... com seu arquivo",
-  "elementar, meu caro usuário",
-  "rápido e certeiro",
-  "missão: download",
-  "do jeito que tem que ser",
-  "na velocidade da luz",
+  "nada dura pra sempre",
+  "antes que seja tarde demais",
+  "você sabe o que fazer",
+  "não olhe para trás",
+  "isso fica entre nós",
+  "silêncio. downloads acontecendo",
+  "a internet esquece. você não",
+  "eles não vão saber",
+  "grave enquanto pode",
+  "o tempo não espera",
+  "sem rastros",
+  "você foi avisado",
+  "uma vez perdido, perdido pra sempre",
+  "confie em mim",
+  "isso não é sobre você",
+  "ninguém precisa saber",
+  "só mais um",
+  "a gente finge que não viu",
+  "tecnicamente legal",
+  "moralmente ambíguo",
+  "eticamente questionável",
+  "juridicamente cinza",
+  "o algoritmo não vai te achar aqui",
+  "backup pessoal",
+  "arquivamento acadêmico",
+  "preservação cultural",
+  "fair use provavelmente",
+  "a culpa é do yt-dlp",
 ];
 
 const loadingMessages = [
@@ -144,22 +159,20 @@ export function UrlInput({ onSubmit, onBatchSubmit, isLoading, error }: UrlInput
             <button
               type="button"
               onClick={() => setIsBatchMode(false)}
-              className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
-                !isBatchMode
-                  ? "bg-dark-700 text-white"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
+              className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${!isBatchMode
+                ? "bg-dark-700 text-white"
+                : "text-gray-500 hover:text-gray-300"
+                }`}
             >
               URL única
             </button>
             <button
               type="button"
               onClick={() => setIsBatchMode(true)}
-              className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
-                isBatchMode
-                  ? "bg-dark-700 text-white"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
+              className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${isBatchMode
+                ? "bg-dark-700 text-white"
+                : "text-gray-500 hover:text-gray-300"
+                }`}
             >
               lote
             </button>

@@ -22,10 +22,12 @@ function App() {
   const [playlistInfo, setPlaylistInfo] = useState<PlaylistInfo | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<VideoFormat | null>(null);
   const [audioOnly, setAudioOnly] = useState(false);
+  const [isAudioService, setIsAudioService] = useState(false);
   const [downloadSubs, setDownloadSubs] = useState(false);
   const [subLang, setSubLang] = useState("pt,en");
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [showYoutubeWarning, setShowYoutubeWarning] = useState(!platform.isTauri);
 
   // Load settings on mount
   useEffect(() => {
@@ -69,19 +71,42 @@ function App() {
       setPlaylistInfo(null);
       setSelectedFormat(null);
       setAudioOnly(false);
+      setIsAudioService(false);
     }
     setActiveTab(tab);
+  };
+
+  // Helper to detect audio-only services
+  const isAudioOnlyService = (url: string): boolean => {
+    const audioServices = [
+      'soundcloud.com',
+      'spotify.com',
+      'open.spotify.com',
+      'music.apple.com',
+      'deezer.com',
+      'bandcamp.com',
+      'audiomack.com',
+      'mixcloud.com',
+    ];
+    return audioServices.some(service => url.includes(service));
   };
 
   const handleUrlSubmit = async (url: string) => {
     setVideoInfo(null);
     setPlaylistInfo(null);
     setSelectedFormat(null);
-    
+
+    // Auto-detect audio services
+    const isAudio = isAudioOnlyService(url);
+    setIsAudioService(isAudio);
+    if (isAudio) {
+      setAudioOnly(true);
+    }
+
     try {
       // Check if it's a playlist
       const isPlaylistUrl = await isPlaylist(url);
-      
+
       if (isPlaylistUrl) {
         const info = await getPlaylistInfo(url);
         setPlaylistInfo(info);
@@ -112,7 +137,7 @@ function App() {
   const handleBatchSubmit = async (urls: string[]) => {
     // For batch, use default path or ask for one
     const outputPath = settings?.defaultOutputPath || (platform.isWeb ? "server" : "");
-    
+
     if (!outputPath && platform.isTauri) {
       // Need to select a folder first
       const selected = await selectDirectory();
@@ -128,7 +153,7 @@ function App() {
 
   const handlePlaylistDownload = async (urls: string[]) => {
     const outputPath = settings?.defaultOutputPath || (platform.isWeb ? "server" : "");
-    
+
     if (!outputPath && platform.isTauri) {
       const selected = await selectDirectory();
       if (selected) {
@@ -154,6 +179,38 @@ function App() {
       />
 
       <main className="flex-1 overflow-hidden relative">
+        {/* YouTube Warning Badge */}
+        {showYoutubeWarning && (
+          <div className="absolute top-4 right-4 z-20 max-w-xs animate-fade-in">
+            <div className="bg-dark-800 border border-dark-600 rounded-xl p-4 shadow-lg">
+              <button
+                onClick={() => setShowYoutubeWarning(false)}
+                className="absolute top-2 right-2 text-gray-500 hover:text-white transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <div className="flex items-start gap-3 pr-4">
+                <span className="text-2xl">🦫</span>
+                <div>
+                  <p className="text-white text-sm font-medium mb-1">YouTube?</p>
+                  <p className="text-gray-400 text-xs">
+                    Pra baixar do YouTube, use o{" "}
+                    <a
+                      href="https://github.com/raejogos/jara/releases/download/v1.1.0/Jara_1.1.0_x64-setup.exe"
+                      className="text-white underline hover:text-gray-300"
+                    >
+                      app desktop
+                    </a>
+                    !
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === "download" && (
           <>
             <div className="absolute top-0 left-0 right-0 flex justify-center py-4 z-10">
@@ -162,7 +219,23 @@ function App() {
 
             <div className="h-full overflow-y-auto">
               <div className="min-h-full flex flex-col items-center justify-center p-8 animate-fade-in">
-                <div className="w-full max-w-2xl space-y-6 pb-8">
+                <div className="w-full max-w-2xl space-y-8 pb-8">
+
+                  {/* Logo centralizada */}
+                  <div className="flex items-center justify-center gap-4 mb-4">
+                    <img
+                      src="/icon.png"
+                      alt="Jara Logo"
+                      className="w-20 h-20 object-contain"
+                    />
+                    <span
+                      className="text-4xl text-white"
+                      style={{ fontFamily: "'Press Start 2P', cursive" }}
+                    >
+                      jara
+                    </span>
+                  </div>
+
                   <UrlInput onSubmit={handleUrlSubmit} onBatchSubmit={handleBatchSubmit} isLoading={isLoading} error={error} />
 
                   {videoInfo && (
@@ -175,6 +248,7 @@ function App() {
                         onSelectFormat={setSelectedFormat}
                         audioOnly={audioOnly}
                         onAudioOnlyChange={setAudioOnly}
+                        isAudioService={isAudioService}
                         downloadSubs={downloadSubs}
                         onDownloadSubsChange={setDownloadSubs}
                         subLang={subLang}

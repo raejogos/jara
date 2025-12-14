@@ -28,7 +28,7 @@ if (!fs.existsSync(DOWNLOADS_DIR)) {
 // Get video info
 app.post('/api/video-info', async (req, res) => {
   const { url } = req.body;
-  
+
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
   }
@@ -97,7 +97,7 @@ app.post('/api/video-info', async (req, res) => {
 // Get playlist info
 app.post('/api/playlist-info', async (req, res) => {
   const { url } = req.body;
-  
+
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
   }
@@ -180,7 +180,7 @@ app.post('/api/download', async (req, res) => {
   args.push(url);
 
   const ytdlp = spawn('yt-dlp', args);
-  
+
   downloads.set(downloadId, {
     process: ytdlp,
     progress: 0,
@@ -190,20 +190,40 @@ app.post('/api/download', async (req, res) => {
 
   ytdlp.stdout.on('data', (data) => {
     const line = data.toString();
+    const download = downloads.get(downloadId);
+    if (!download) return;
+
+    // Capture progress
     const progressMatch = line.match(/\[download\]\s+(\d+\.?\d*)%/);
     if (progressMatch) {
-      const download = downloads.get(downloadId);
-      if (download) {
-        download.progress = parseFloat(progressMatch[1]);
-      }
+      download.progress = parseFloat(progressMatch[1]);
     }
+
+    // Capture destination from download
     const destMatch = line.match(/\[download\] Destination: (.+)/);
     if (destMatch) {
-      const download = downloads.get(downloadId);
-      if (download) {
-        download.filename = path.basename(destMatch[1]);
-      }
+      download.filename = path.basename(destMatch[1].trim());
     }
+
+    // Capture destination from audio extraction (overwrites download destination)
+    const extractMatch = line.match(/\[ExtractAudio\] Destination: (.+)/);
+    if (extractMatch) {
+      download.filename = path.basename(extractMatch[1].trim());
+    }
+
+    // Capture "already downloaded" case
+    const alreadyMatch = line.match(/\[download\] (.+) has already been downloaded/);
+    if (alreadyMatch) {
+      download.filename = path.basename(alreadyMatch[1].trim());
+    }
+
+    // Log for debugging
+    console.log('[yt-dlp]', line.trim());
+  });
+
+  ytdlp.stderr.on('data', (data) => {
+    const line = data.toString();
+    console.log('[yt-dlp stderr]', line.trim());
   });
 
   ytdlp.on('close', (code) => {

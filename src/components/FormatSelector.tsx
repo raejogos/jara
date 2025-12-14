@@ -7,6 +7,7 @@ interface FormatSelectorProps {
   onSelectFormat: (format: VideoFormat | null) => void;
   audioOnly: boolean;
   onAudioOnlyChange: (audioOnly: boolean) => void;
+  isAudioService?: boolean;
   downloadSubs?: boolean;
   onDownloadSubsChange?: (downloadSubs: boolean) => void;
   subLang?: string;
@@ -19,6 +20,7 @@ export function FormatSelector({
   onSelectFormat,
   audioOnly,
   onAudioOnlyChange,
+  isAudioService = false,
   downloadSubs = false,
   onDownloadSubsChange,
   subLang = "pt,en",
@@ -87,15 +89,13 @@ export function FormatSelector({
         <label className="flex items-center gap-3 cursor-pointer">
           <span className="text-sm text-gray-500">Apenas áudio (MP3)</span>
           <div
-            className={`relative w-12 h-6 rounded-full transition-colors ${
-              audioOnly ? "bg-white" : "bg-dark-600"
-            }`}
+            className={`relative w-12 h-6 rounded-full transition-colors ${audioOnly ? "bg-white" : "bg-dark-600"
+              }`}
             onClick={() => onAudioOnlyChange(!audioOnly)}
           >
             <div
-              className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${
-                audioOnly ? "translate-x-7 bg-black" : "translate-x-1 bg-gray-400"
-              }`}
+              className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${audioOnly ? "translate-x-7 bg-black" : "translate-x-1 bg-gray-400"
+                }`}
             />
           </div>
         </label>
@@ -113,8 +113,14 @@ export function FormatSelector({
               />
             </svg>
             <div>
-              <p className="font-medium text-white">Extração de áudio habilitada</p>
-              <p className="text-sm text-gray-500">O vídeo será convertido para MP3 com qualidade máxima</p>
+              <p className="font-medium text-white">
+                {isAudioService ? "Download de áudio" : "Extração de áudio habilitada"}
+              </p>
+              <p className="text-sm text-gray-500">
+                {isAudioService
+                  ? "O áudio será baixado em MP3 com qualidade máxima"
+                  : "O vídeo será convertido para MP3 com qualidade máxima"}
+              </p>
             </div>
           </div>
         </div>
@@ -123,11 +129,10 @@ export function FormatSelector({
           {/* Best quality option */}
           <button
             onClick={() => onSelectFormat(null)}
-            className={`p-4 rounded-lg border transition-all ${
-              selectedFormat === null
+            className={`p-4 rounded-lg border transition-all ${selectedFormat === null
                 ? "border-white bg-white text-black"
                 : "border-dark-600 bg-dark-800 text-gray-400 hover:border-dark-500"
-            }`}
+              }`}
           >
             <div className="flex items-center gap-2 mb-2">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -148,20 +153,18 @@ export function FormatSelector({
             <button
               key={format.format_id}
               onClick={() => onSelectFormat(format)}
-              className={`p-4 rounded-lg border transition-all ${
-                selectedFormat?.format_id === format.format_id
+              className={`p-4 rounded-lg border transition-all ${selectedFormat?.format_id === format.format_id
                   ? "border-white bg-white text-black"
                   : "border-dark-600 bg-dark-800 text-gray-400 hover:border-dark-500"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2 mb-2">
                 <span className="font-medium">{format.resolution || format.format_note}</span>
                 {format.fps && format.fps >= 60 && (
-                  <span className={`px-1.5 py-0.5 text-xs rounded ${
-                    selectedFormat?.format_id === format.format_id
+                  <span className={`px-1.5 py-0.5 text-xs rounded ${selectedFormat?.format_id === format.format_id
                       ? "bg-black/20 text-black"
                       : "bg-dark-600 text-gray-400"
-                  }`}>
+                    }`}>
                     {format.fps}fps
                   </span>
                 )}
@@ -211,15 +214,13 @@ export function FormatSelector({
               )}
 
               <div
-                className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${
-                  downloadSubs ? "bg-white" : "bg-dark-600"
-                }`}
+                className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${downloadSubs ? "bg-white" : "bg-dark-600"
+                  }`}
                 onClick={() => onDownloadSubsChange(!downloadSubs)}
               >
                 <div
-                  className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${
-                    downloadSubs ? "translate-x-7 bg-black" : "translate-x-1 bg-gray-400"
-                  }`}
+                  className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${downloadSubs ? "translate-x-7 bg-black" : "translate-x-1 bg-gray-400"
+                    }`}
                 />
               </div>
             </div>
