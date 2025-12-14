@@ -15,13 +15,14 @@ export async function loadSettings(): Promise<AppSettings> {
   try {
     if (platform.isTauri) {
       // Tauri: load from app data directory
+      // @ts-ignore - Tauri plugin only available in desktop app
       const { BaseDirectory, readTextFile, exists } = await import("@tauri-apps/plugin-fs");
-      
+
       const fileExists = await exists("settings.json", { baseDir: BaseDirectory.AppData });
       if (!fileExists) {
         return DEFAULT_SETTINGS;
       }
-      
+
       const content = await readTextFile("settings.json", { baseDir: BaseDirectory.AppData });
       return { ...DEFAULT_SETTINGS, ...JSON.parse(content) };
     } else {
@@ -42,16 +43,17 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
   try {
     if (platform.isTauri) {
       // Tauri: save to app data directory
+      // @ts-ignore - Tauri plugin only available in desktop app
       const { BaseDirectory, writeTextFile, mkdir, exists } = await import("@tauri-apps/plugin-fs");
-      
+
       // Ensure directory exists
       const dirExists = await exists("", { baseDir: BaseDirectory.AppData });
       if (!dirExists) {
         await mkdir("", { baseDir: BaseDirectory.AppData, recursive: true });
       }
-      
-      await writeTextFile("settings.json", JSON.stringify(settings, null, 2), { 
-        baseDir: BaseDirectory.AppData 
+
+      await writeTextFile("settings.json", JSON.stringify(settings, null, 2), {
+        baseDir: BaseDirectory.AppData
       });
     } else {
       // Web: save to localStorage
