@@ -217,6 +217,18 @@ app.post('/api/download', async (req, res) => {
       download.filename = path.basename(alreadyMatch[1].trim());
     }
 
+    // Capture merged output (final filename after combining video+audio)
+    const mergeMatch = line.match(/\[Merger\] Merging formats into "(.+)"/);
+    if (mergeMatch) {
+      download.filename = path.basename(mergeMatch[1].trim());
+    }
+
+    // Capture ffmpeg destination (another common pattern)
+    const ffmpegMatch = line.match(/Destination: (.+\.(mp4|mkv|webm|mp3|m4a))/i);
+    if (ffmpegMatch) {
+      download.filename = path.basename(ffmpegMatch[1].trim());
+    }
+
     // Log for debugging
     console.log('[yt-dlp]', line.trim());
   });
@@ -231,6 +243,27 @@ app.post('/api/download', async (req, res) => {
     if (download) {
       download.status = code === 0 ? 'completed' : 'error';
       download.progress = code === 0 ? 100 : download.progress;
+
+      // Try to find the actual file if the captured filename doesn't exist
+      if (download.filename) {
+        const capturedPath = path.join(DOWNLOADS_DIR, download.filename);
+        if (!fs.existsSync(capturedPath)) {
+          // Try to find a similar file (without format code like .f251)
+          const baseName = download.filename.replace(/\.f\d+\./, '.');
+          const altPath = path.join(DOWNLOADS_DIR, baseName);
+          if (fs.existsSync(altPath)) {
+            download.filename = baseName;
+          } else {
+            // Look for any file matching the title
+            const titleBase = download.filename.split('.')[0];
+            const files = fs.readdirSync(DOWNLOADS_DIR);
+            const match = files.find(f => f.startsWith(titleBase));
+            if (match) {
+              download.filename = match;
+            }
+          }
+        }
+      }
     }
   });
 
@@ -267,7 +300,21 @@ app.get('/api/download/:id/file', (req, res) => {
   if (!download || !download.filename) {
     return res.status(404).json({ error: 'File not found' });
   }
+
   const filePath = path.join(DOWNLOADS_DIR, download.filename);
+
+  // Verify file exists before trying to send
+  if (!fs.existsSync(filePath)) {
+    // Try removing format code from filename
+    const baseName = download.filename.replace(/\.f\d+\./, '.');
+    const altPath = path.join(DOWNLOADS_DIR, baseName);
+    if (fs.existsSync(altPath)) {
+      return res.download(altPath);
+    }
+
+    return res.status(404).json({ error: 'File not found on disk' });
+  }
+
   res.download(filePath);
 });
 

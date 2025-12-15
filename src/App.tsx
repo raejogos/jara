@@ -11,15 +11,17 @@ import { PlaylistPreview } from "./components/PlaylistPreview";
 import { SupportedServicesButton } from "./components/SupportedServices";
 import { AnimatedBackground } from "./components/AnimatedBackground";
 import { GradientBackground } from "./components/GradientBackground";
+import { HomePage } from "./components/HomePage"; // Import HomePage
 import { useDownload } from "./hooks/useDownload";
 import { selectDirectory, platform, getDownloadUrl } from "./services/api";
 import { loadSettings, saveSettings } from "./services/storage";
 import type { VideoInfo, VideoFormat, AppSettings, PlaylistInfo } from "./types";
 
-type Tab = "download" | "convert" | "queue" | "settings" | "about";
+type Tab = "download" | "convert" | "queue" | "settings" | "about" | "home";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<Tab>("download");
+  const [activeTab, setActiveTab] = useState<Tab>("home"); // Default to home
+  const [initialAction, setInitialAction] = useState<string | undefined>(undefined);
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [playlistInfo, setPlaylistInfo] = useState<PlaylistInfo | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<VideoFormat | null>(null);
@@ -30,6 +32,7 @@ function App() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [showYoutubeWarning, setShowYoutubeWarning] = useState(!platform.isTauri);
+  const [initialUrl, setInitialUrl] = useState<string | undefined>(undefined);
 
   // Load settings on mount
   useEffect(() => {
@@ -74,6 +77,28 @@ function App() {
       setSelectedFormat(null);
       setAudioOnly(false);
       setIsAudioService(false);
+    }
+    // Clear initial action when manually changing tabs, unless coming from Home
+    if (tab !== "convert") {
+      setInitialAction(undefined);
+    }
+    setActiveTab(tab);
+  };
+
+  const handleNavigate = (tab: "convert" | "download", action?: string, url?: string) => {
+    if (tab === "convert" && action) {
+      setInitialAction(action);
+    } else if (tab === "download" && action === "download-audio") {
+      setAudioOnly(true);
+      setIsAudioService(true);
+    } else if (tab === "download") {
+      // Reset if just navigating to download without specific audio intent
+      setAudioOnly(false);
+      setIsAudioService(false);
+    }
+    // If URL is provided, set it for UrlInput
+    if (url) {
+      setInitialUrl(url);
     }
     setActiveTab(tab);
   };
@@ -202,7 +227,7 @@ function App() {
                   <p className="text-gray-400 text-xs">
                     Pra baixar do YouTube, use o{" "}
                     <a
-                      href="https://github.com/raejogos/jara/releases/download/v1.1.0/Jara_1.1.0_x64-setup.exe"
+                      href="https://github.com/raejogos/jara/releases/download/v1.2.0/Jara_1.2.0_x64-setup.exe"
                       className="text-white underline hover:text-gray-300"
                     >
                       app desktop
@@ -215,6 +240,14 @@ function App() {
           </div>
         )}
 
+        {/* Home Tab */}
+        {activeTab === "home" && (
+          <div className="h-full animate-fade-in relative">
+            <HomePage onNavigate={handleNavigate} />
+          </div>
+        )}
+
+        {/* Download Tab */}
         {activeTab === "download" && (
           <>
             <div className="absolute top-0 left-0 right-0 flex justify-center py-4 z-10">
@@ -240,7 +273,14 @@ function App() {
                     </span>
                   </div>
 
-                  <UrlInput onSubmit={handleUrlSubmit} onBatchSubmit={handleBatchSubmit} isLoading={isLoading} error={error} />
+                  <UrlInput
+                    onSubmit={handleUrlSubmit}
+                    onBatchSubmit={handleBatchSubmit}
+                    isLoading={isLoading}
+                    error={error}
+                    initialUrl={initialUrl}
+                    onInitialUrlConsumed={() => setInitialUrl(undefined)}
+                  />
 
                   {videoInfo && (
                     <div className="space-y-6 animate-slide-up">
@@ -282,12 +322,14 @@ function App() {
           </>
         )}
 
+        {/* Convert Tab */}
         {activeTab === "convert" && (
           <div className="h-full animate-fade-in">
-            <ConvertPage />
+            <ConvertPage initialAction={initialAction} />
           </div>
         )}
 
+        {/* Queue Tab */}
         {activeTab === "queue" && (
           <div className="h-full p-8 animate-fade-in">
             <DownloadList
@@ -300,6 +342,7 @@ function App() {
           </div>
         )}
 
+        {/* Settings Tab */}
         {activeTab === "settings" && (
           <div className="h-full p-8 overflow-y-auto animate-fade-in">
             {settings ? (
@@ -312,6 +355,7 @@ function App() {
           </div>
         )}
 
+        {/* About Tab */}
         {activeTab === "about" && (
           <div className="h-full animate-fade-in">
             <About />

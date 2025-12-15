@@ -9,16 +9,13 @@ export function About() {
             alt="Jara"
             className="w-20 h-20 object-contain"
           />
-          <h1
-            className="text-4xl text-white"
-            style={{ fontFamily: "'Press Start 2P', cursive" }}
-          >
-            jara
-          </h1>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent mb-2">
+            Jara
+          </h2>
         </div>
 
         {/* Version */}
-        <p className="text-gray-500 text-sm mb-6">v1.1.0</p>
+        <p className="text-gray-500 text-sm mb-6">v1.2.0</p>
 
         {/* Description */}
         <div className="text-gray-400 mb-8 space-y-2">

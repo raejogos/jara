@@ -1,6 +1,6 @@
 interface SidebarProps {
-  activeTab: "download" | "convert" | "queue" | "settings" | "about";
-  onTabChange: (tab: "download" | "convert" | "queue" | "settings" | "about") => void;
+  activeTab: "download" | "convert" | "queue" | "settings" | "about" | "home";
+  onTabChange: (tab: "download" | "convert" | "queue" | "settings" | "about" | "home") => void;
   queueCount: number;
 }
 
@@ -18,8 +18,11 @@ export function Sidebar({ activeTab, onTabChange, queueCount }: SidebarProps) {
 
   return (
     <aside className="w-16 h-full bg-dark-900 border-r border-dark-700 flex flex-col items-center py-4">
-      {/* Logo - will use custom icon */}
-      <div className="w-10 h-10 rounded-xl bg-dark-800 border border-dark-700 flex items-center justify-center mb-8 overflow-hidden">
+      {/* Logo - click to go home */}
+      <button
+        onClick={() => onTabChange("home" as any)} // Cast to any to avoid type error temporarily until App type is updated
+        className="w-10 h-10 rounded-xl bg-dark-800 border border-dark-700 flex items-center justify-center mb-8 overflow-hidden hover:border-white/30 transition-colors"
+      >
         <img
           src="/icon.png"
           alt="Jara"
@@ -33,7 +36,7 @@ export function Sidebar({ activeTab, onTabChange, queueCount }: SidebarProps) {
             `;
           }}
         />
-      </div>
+      </button>
 
       {/* Top Navigation */}
       <nav className="flex flex-col gap-2 flex-1">
@@ -78,8 +81,8 @@ function NavButton({ item, isActive, onClick }: NavButtonProps) {
     <button
       onClick={onClick}
       className={`group relative w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isActive
-          ? "bg-white text-black"
-          : "text-gray-500 hover:text-white hover:bg-dark-700"
+        ? "bg-white text-black"
+        : "text-gray-500 hover:text-white hover:bg-dark-700"
         }`}
       title={item.label}
     >

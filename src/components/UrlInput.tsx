@@ -6,6 +6,8 @@ interface UrlInputProps {
   onBatchSubmit?: (urls: string[]) => void;
   isLoading: boolean;
   error: string | null;
+  initialUrl?: string;
+  onInitialUrlConsumed?: () => void;
 }
 
 const slogans = [
@@ -188,7 +190,7 @@ const ServiceIcon = ({ service }: { service: string | null }) => {
   );
 };
 
-export function UrlInput({ onSubmit, onBatchSubmit, isLoading, error }: UrlInputProps) {
+export function UrlInput({ onSubmit, onBatchSubmit, isLoading, error, initialUrl, onInitialUrlConsumed }: UrlInputProps) {
   const [url, setUrl] = useState("");
   const [batchUrls, setBatchUrls] = useState("");
   const [isBatchMode, setIsBatchMode] = useState(false);
@@ -199,6 +201,19 @@ export function UrlInput({ onSubmit, onBatchSubmit, isLoading, error }: UrlInput
   const slogan = useMemo(() => {
     return slogans[Math.floor(Math.random() * slogans.length)];
   }, []);
+
+  // Handle initial URL from navigation (e.g., from HomePage paste)
+  useEffect(() => {
+    if (initialUrl && !isLoading) {
+      setUrl(initialUrl);
+      // Auto-submit if URL looks valid
+      if (initialUrl.startsWith("http://") || initialUrl.startsWith("https://")) {
+        onSubmit(initialUrl);
+      }
+      // Consume the initial URL to prevent re-triggering
+      onInitialUrlConsumed?.();
+    }
+  }, [initialUrl, isLoading, onSubmit, onInitialUrlConsumed]);
 
   // Cycle through loading messages
   useEffect(() => {
@@ -390,8 +405,8 @@ export function UrlInput({ onSubmit, onBatchSubmit, isLoading, error }: UrlInput
           <p className="text-gray-300 text-sm mb-3">{youtubeWarning}</p>
           {!isMobile() && (
             <a
-              href="https://github.com/raejogos/jara/releases/download/v1.1.0/Jara_1.1.0_x64-setup.exe"
-              className="inline-flex items-center gap-2 text-xs text-white bg-dark-700 hover:bg-dark-600 px-4 py-2 rounded-lg transition-colors"
+              href="https://github.com/raejogos/jara/releases/download/v1.2.0/Jara_1.2.0_x64-setup.exe"
+              className="text-white underline hover:text-gray-300 font-semibold"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />

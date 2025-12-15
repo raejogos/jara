@@ -2,7 +2,7 @@ import { useState } from "react";
 import { platform } from "../services/api";
 import type { AppSettings } from "../types";
 
-const CURRENT_VERSION = "1.1.0";
+const CURRENT_VERSION = "1.2.0";
 const GITHUB_RELEASES_URL = "https://api.github.com/repos/raejogos/jara/releases/latest";
 const DOWNLOAD_URL = "https://github.com/raejogos/jara/releases/latest";
 
