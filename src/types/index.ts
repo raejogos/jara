@@ -78,5 +78,6 @@ export interface AppSettings {
   preferredAudioFormat: string;
   preferredVideoQuality: string;
   notificationsEnabled: boolean;
+  animatedBackground: boolean;
 }
 

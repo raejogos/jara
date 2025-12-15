@@ -51,148 +51,113 @@ export function Settings({ settings, onSettingsChange }: SettingsProps) {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <h2 className="text-2xl font-bold mb-6 text-white">Configurações</h2>
+    <div className="max-w-lg mx-auto space-y-4">
+      <h2 className="text-sm uppercase tracking-wider text-gray-500 mb-4 font-mono">configurações</h2>
 
       {/* Default output path - Desktop only */}
       {platform.isTauri && (
-        <div className="glass rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200">
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-              />
-            </svg>
-            Pasta Padrão de Downloads
-          </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Defina a pasta onde os downloads serão salvos por padrão.
-          </p>
-
-          <div className="flex gap-3">
+        <div className="bg-dark-800 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-white text-sm">pasta de downloads</span>
+          </div>
+          <div className="flex gap-2">
             <input
               type="text"
               value={settings.defaultOutputPath}
               onChange={(e) =>
                 onSettingsChange({ ...settings, defaultOutputPath: e.target.value })
               }
-              placeholder="Selecione ou digite o caminho..."
-              className="flex-1 bg-dark-800 border border-dark-600 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:border-dark-400 transition-colors"
+              placeholder="selecione a pasta..."
+              className="flex-1 bg-dark-900 border border-dark-700 rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-dark-500 transition-colors"
             />
             <button
               onClick={handleSelectDefaultFolder}
-              className="px-4 py-3 bg-dark-700 hover:bg-dark-600 border border-dark-600 rounded-lg transition-colors text-gray-300"
+              className="px-3 py-2 bg-dark-700 hover:bg-dark-600 rounded text-xs text-gray-400 transition-colors"
             >
-              Procurar
+              procurar
             </button>
           </div>
         </div>
       )}
 
       {/* Audio format */}
-      <div className="glass rounded-xl p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200">
-          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-            />
-          </svg>
-          Formato de Áudio Preferido
-        </h3>
-        <p className="text-sm text-gray-500 mb-4">
-          Formato usado quando a opção "Apenas áudio" está habilitada.
-        </p>
-
-        <div className="flex gap-3">
-          {["mp3", "m4a", "opus", "flac"].map((format) => (
-            <button
-              key={format}
-              onClick={() =>
-                onSettingsChange({ ...settings, preferredAudioFormat: format })
-              }
-              className={`px-4 py-2 rounded-lg border transition-all ${settings.preferredAudioFormat === format
-                  ? "border-white bg-white text-black"
-                  : "border-dark-600 bg-dark-800 text-gray-400 hover:border-dark-500"
-                }`}
-            >
-              {format.toUpperCase()}
-            </button>
-          ))}
+      <div className="bg-dark-800 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-white text-sm">formato de áudio</span>
+          <div className="flex gap-1">
+            {["mp3", "m4a", "opus", "flac"].map((format) => (
+              <button
+                key={format}
+                onClick={() =>
+                  onSettingsChange({ ...settings, preferredAudioFormat: format })
+                }
+                className={`px-2 py-1 rounded text-xs transition-all ${settings.preferredAudioFormat === format
+                  ? "bg-white text-black"
+                  : "bg-dark-700 text-gray-500 hover:text-gray-300"
+                  }`}
+              >
+                {format}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Video quality */}
-      <div className="glass rounded-xl p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200">
-          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-            />
-          </svg>
-          Qualidade de Vídeo Preferida
-        </h3>
-        <p className="text-sm text-gray-500 mb-4">
-          Qualidade padrão quando nenhuma é selecionada manualmente.
-        </p>
-
-        <div className="flex flex-wrap gap-3">
-          {[
-            { id: "best", label: "Melhor disponível" },
-            { id: "1080p", label: "1080p" },
-            { id: "720p", label: "720p" },
-            { id: "480p", label: "480p" },
-          ].map((quality) => (
-            <button
-              key={quality.id}
-              onClick={() =>
-                onSettingsChange({ ...settings, preferredVideoQuality: quality.id })
-              }
-              className={`px-4 py-2 rounded-lg border transition-all ${settings.preferredVideoQuality === quality.id
-                  ? "border-white bg-white text-black"
-                  : "border-dark-600 bg-dark-800 text-gray-400 hover:border-dark-500"
-                }`}
-            >
-              {quality.label}
-            </button>
-          ))}
+      <div className="bg-dark-800 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-white text-sm">qualidade de vídeo</span>
+          <div className="flex gap-1">
+            {[
+              { id: "best", label: "melhor" },
+              { id: "1080p", label: "1080p" },
+              { id: "720p", label: "720p" },
+              { id: "480p", label: "480p" },
+            ].map((quality) => (
+              <button
+                key={quality.id}
+                onClick={() =>
+                  onSettingsChange({ ...settings, preferredVideoQuality: quality.id })
+                }
+                className={`px-2 py-1 rounded text-xs transition-all ${settings.preferredVideoQuality === quality.id
+                  ? "bg-white text-black"
+                  : "bg-dark-700 text-gray-500 hover:text-gray-300"
+                  }`}
+              >
+                {quality.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Notifications */}
-      <div className="glass rounded-xl p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200">
-          <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-            />
-          </svg>
-          Notificações
-        </h3>
-        <p className="text-sm text-gray-500 mb-4">
-          Receba uma notificação quando um download for concluído.
-        </p>
-
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">Notificar ao concluir download</span>
+      {/* Toggles section */}
+      <div className="bg-dark-800 rounded-lg divide-y divide-dark-700">
+        {/* Notifications */}
+        <div className="p-4 flex items-center justify-between">
+          <span className="text-white text-sm">notificações</span>
           <div
-            className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${settings.notificationsEnabled ? "bg-white" : "bg-dark-600"
+            className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${settings.notificationsEnabled ? "bg-white" : "bg-dark-600"
               }`}
             onClick={() => onSettingsChange({ ...settings, notificationsEnabled: !settings.notificationsEnabled })}
           >
             <div
-              className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${settings.notificationsEnabled ? "translate-x-7 bg-black" : "translate-x-1 bg-gray-400"
+              className={`absolute top-0.5 w-4 h-4 rounded-full transition-transform ${settings.notificationsEnabled ? "translate-x-5 bg-black" : "translate-x-0.5 bg-gray-500"
+                }`}
+            />
+          </div>
+        </div>
+
+        {/* Animated Background */}
+        <div className="p-4 flex items-center justify-between">
+          <span className="text-white text-sm">fundo animado</span>
+          <div
+            className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${settings.animatedBackground ? "bg-white" : "bg-dark-600"
+              }`}
+            onClick={() => onSettingsChange({ ...settings, animatedBackground: !settings.animatedBackground })}
+          >
+            <div
+              className={`absolute top-0.5 w-4 h-4 rounded-full transition-transform ${settings.animatedBackground ? "translate-x-5 bg-black" : "translate-x-0.5 bg-gray-500"
                 }`}
             />
           </div>
@@ -201,74 +166,54 @@ export function Settings({ settings, onSettingsChange }: SettingsProps) {
 
       {/* Updates - Desktop only */}
       {platform.isTauri && (
-        <div className="glass rounded-xl p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-200">
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            Atualizações
-          </h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Versão atual: <span className="text-white font-mono">v{CURRENT_VERSION}</span>
-          </p>
+        <div className="bg-dark-800 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-white text-sm">versão</span>
+            <span className="text-gray-500 text-xs font-mono">v{CURRENT_VERSION}</span>
+          </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={checkForUpdates}
               disabled={updateStatus === "checking"}
-              className="px-4 py-2 bg-dark-700 hover:bg-dark-600 border border-dark-600 rounded-lg transition-colors text-gray-300 disabled:opacity-50"
+              className="px-3 py-1.5 bg-dark-700 hover:bg-dark-600 rounded text-xs text-gray-400 transition-colors disabled:opacity-50"
             >
-              {updateStatus === "checking" ? (
-                <span className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-gray-600 border-t-gray-300 rounded-full animate-spin" />
-                  verificando...
-                </span>
-              ) : (
-                "verificar atualizações"
-              )}
+              {updateStatus === "checking" ? "verificando..." : "verificar atualizações"}
             </button>
 
             {updateStatus === "up-to-date" && (
-              <span className="text-sm text-green-400 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                você está na versão mais recente
-              </span>
+              <span className="text-xs text-green-400">atualizado</span>
             )}
 
             {updateStatus === "error" && (
-              <span className="text-sm text-gray-500">
-                erro ao verificar
-              </span>
+              <span className="text-xs text-gray-500">erro</span>
             )}
           </div>
 
           {updateStatus === "available" && latestVersion && (
-            <div className="mt-4 p-4 bg-dark-800 border border-dark-600 rounded-lg">
-              <p className="text-white text-sm mb-3">
-                nova versão disponível: <span className="font-mono text-green-400">v{latestVersion}</span>
-              </p>
-              <a
-                href={DOWNLOAD_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                baixar atualização
-              </a>
+            <div className="mt-3 p-3 bg-dark-900 rounded">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-400">
+                  nova versão: <span className="text-green-400 font-mono">v{latestVersion}</span>
+                </span>
+                <a
+                  href={DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-1 bg-white text-black rounded text-xs hover:bg-gray-200 transition-colors"
+                >
+                  baixar
+                </a>
+              </div>
             </div>
           )}
         </div>
       )}
+
+      {/* Footer */}
+      <p className="text-center text-gray-700 text-xs font-mono pt-4">
+        jara — tempo livre mal investido
+      </p>
     </div>
   );
 }

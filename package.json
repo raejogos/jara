@@ -11,11 +11,13 @@
     "server:install": "cd server && npm install"
   },
   "dependencies": {
-    "@ffmpeg/ffmpeg": "^0.12.10",
-    "@ffmpeg/util": "^0.12.1",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@imgly/background-removal": "^1.7.0",
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/plugin-dialog": "^2.2.0",
     "@tauri-apps/plugin-shell": "^2.2.0",
+    "browser-image-compression": "^2.0.2",
     "jspdf": "^3.0.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

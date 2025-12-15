@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   preferredAudioFormat: "mp3",
   preferredVideoQuality: "best",
   notificationsEnabled: true,
+  animatedBackground: true,
 };
 
 export async function loadSettings(): Promise<AppSettings> {

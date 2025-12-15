@@ -7,7 +7,7 @@ interface SidebarProps {
 export function Sidebar({ activeTab, onTabChange, queueCount }: SidebarProps) {
   const topNavItems = [
     { id: "download" as const, icon: DownloadIcon, label: "Baixar" },
-    { id: "convert" as const, icon: ConvertIcon, label: "Converter" },
+    { id: "convert" as const, icon: ConvertIcon, label: "Ferramentas" },
     { id: "queue" as const, icon: QueueIcon, label: "Fila", badge: queueCount },
     { id: "settings" as const, icon: SettingsIcon, label: "Configurações" },
   ];
@@ -20,9 +20,9 @@ export function Sidebar({ activeTab, onTabChange, queueCount }: SidebarProps) {
     <aside className="w-16 h-full bg-dark-900 border-r border-dark-700 flex flex-col items-center py-4">
       {/* Logo - will use custom icon */}
       <div className="w-10 h-10 rounded-xl bg-dark-800 border border-dark-700 flex items-center justify-center mb-8 overflow-hidden">
-        <img 
-          src="/icon.png" 
-          alt="Jara" 
+        <img
+          src="/icon.png"
+          alt="Jara"
           className="w-6 h-6 object-contain"
           onError={(e) => {
             e.currentTarget.style.display = 'none';
@@ -77,20 +77,18 @@ function NavButton({ item, isActive, onClick }: NavButtonProps) {
   return (
     <button
       onClick={onClick}
-      className={`group relative w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-        isActive
+      className={`group relative w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isActive
           ? "bg-white text-black"
           : "text-gray-500 hover:text-white hover:bg-dark-700"
-      }`}
+        }`}
       title={item.label}
     >
       <item.icon className="w-5 h-5" />
-      
+
       {/* Badge */}
       {item.badge !== undefined && item.badge > 0 && (
-        <span className={`absolute -top-1 -right-1 w-4 h-4 text-[10px] font-bold rounded-full flex items-center justify-center ${
-          isActive ? "bg-black text-white" : "bg-white text-black"
-        }`}>
+        <span className={`absolute -top-1 -right-1 w-4 h-4 text-[10px] font-bold rounded-full flex items-center justify-center ${isActive ? "bg-black text-white" : "bg-white text-black"
+          }`}>
           {item.badge > 9 ? "9+" : item.badge}
         </span>
       )}

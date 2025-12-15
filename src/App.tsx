@@ -9,6 +9,8 @@ import { About } from "./components/About";
 import { ConvertPage } from "./components/ConvertPage";
 import { PlaylistPreview } from "./components/PlaylistPreview";
 import { SupportedServicesButton } from "./components/SupportedServices";
+import { AnimatedBackground } from "./components/AnimatedBackground";
+import { GradientBackground } from "./components/GradientBackground";
 import { useDownload } from "./hooks/useDownload";
 import { selectDirectory, platform, getDownloadUrl } from "./services/api";
 import { loadSettings, saveSettings } from "./services/storage";
@@ -171,7 +173,9 @@ function App() {
   ).length;
 
   return (
-    <div className="h-full flex bg-dark-950">
+    <div className="h-full flex bg-dark-950 relative">
+      <GradientBackground />
+      <AnimatedBackground enabled={settings?.animatedBackground ?? true} />
       <Sidebar
         activeTab={activeTab}
         onTabChange={handleTabChange}
