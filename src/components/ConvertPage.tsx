@@ -97,6 +97,7 @@ export function ConvertPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoadingFFmpeg, setIsLoadingFFmpeg] = useState(false);
+  const [conversionResult, setConversionResult] = useState<{ url: string; filename: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Image tools state
@@ -113,10 +114,11 @@ export function ConvertPage() {
   const [bgRemovalQuality, setBgRemovalQuality] = useState(0.8);
 
   // Video tools state
-  const [activeVideoTool, setActiveVideoTool] = useState<"extract-frame" | "trim" | "to-gif" | "remove-audio" | null>(null);
+  const [activeVideoTool, setActiveVideoTool] = useState<"trim" | "to-gif" | null>(null);
   const [videoToolFile, setVideoToolFile] = useState<File | null>(null);
   const [videoToolResult, setVideoToolResult] = useState<string | null>(null);
   const [videoToolProgress, setVideoToolProgress] = useState(0);
+  const [videoToolStatus, setVideoToolStatus] = useState<string>("");
   const [isProcessingVideo, setIsProcessingVideo] = useState(false);
   const videoToolInputRef = useRef<HTMLInputElement>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
@@ -175,6 +177,7 @@ export function ConvertPage() {
     setSelectedFilePath(null);
     setError(null);
     setSuccess(null);
+    setConversionResult(null);
     setOutputFormat(formatsByCategory[newCategory][0].id);
   };
 
@@ -211,6 +214,7 @@ export function ConvertPage() {
         setImageToolProgress(10);
         setEstimatedTimeRemaining("carregando modelo...");
         // Dynamic import to avoid loading the heavy library upfront
+        // @ts-ignore
         const { removeBackground } = await import("@imgly/background-removal");
         setImageToolProgress(30);
 
@@ -220,7 +224,7 @@ export function ConvertPage() {
             format: "image/png",
             quality: bgRemovalQuality,
           },
-          progress: (_key, current, total) => {
+          progress: (_key: string, current: number, total: number) => {
             const p = Math.round((current / total) * 60) + 30;
             setImageToolProgress(Math.min(p, 90));
 
@@ -249,6 +253,7 @@ export function ConvertPage() {
         setSuccess("Fundo removido com sucesso!");
       } else if (activeImageTool === "compress") {
         setImageToolProgress(20);
+        // @ts-ignore
         const imageCompression = await import("browser-image-compression");
 
         const options = {
@@ -291,7 +296,7 @@ export function ConvertPage() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   // Video Tools Logic
-  const handleVideoToolSelect = (tool: "extract-frame" | "trim" | "to-gif" | "remove-audio") => {
+  const handleVideoToolSelect = (tool: "trim" | "to-gif") => {
     setActiveVideoTool(tool);
     setVideoToolFile(null);
     setVideoToolResult(null);
@@ -333,42 +338,50 @@ export function ConvertPage() {
 
     setIsProcessingVideo(true);
     setVideoToolProgress(0);
-    setError(null);
+    setVideoToolStatus("Inicializando FFmpeg...");
 
     const ffmpeg = new FFmpeg();
 
     try {
-      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd'
-      await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-      });
+      // Usar a mesma configuração do converter.ts que já funciona
+      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
 
-      ffmpeg.on('progress', ({ progress }) => {
-        const p = Math.round(progress * 100);
-        setVideoToolProgress(p);
+      setVideoToolStatus("Carregando componentes (ESM)...");
+      const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript");
+      const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm");
+
+      console.log("URLs configuradas:", { coreURL, wasmURL });
+
+      setVideoToolStatus("Inicializando Worker...");
+      await ffmpeg.load({
+        coreURL: coreURL,
+        wasmURL: wasmURL,
+        // Não passamos workerURL aqui pois o build ESM gerencia isso internamente ou não usa worker separado da mesma forma
       });
+      console.log("FFmpeg carregado!");
 
       ffmpeg.on('log', ({ message }) => {
         console.log('FFmpeg Log:', message);
+        if (message.includes("Loading")) setVideoToolStatus("Carregando recursos...");
+
+        // Ignora logs irrelevantes
+        if (message.includes("Aborted()") || message.includes("pthread")) return;
+
+        if (message.includes("run")) setVideoToolStatus("Executando comando...");
       });
 
+      setVideoToolStatus("Preparando arquivo de entrada...");
       await ffmpeg.writeFile('input.mp4', await fetchFile(videoToolFile));
 
       let outputFilename = '';
       let mimeType = '';
 
-      if (activeVideoTool === 'extract-frame') {
-        outputFilename = 'frame.png';
-        mimeType = 'image/png';
-        await ffmpeg.exec([
-          '-ss', frameTime.toString(),
-          '-i', 'input.mp4',
-          '-frames:v', '1',
-          outputFilename
-        ]);
-      }
-      else if (activeVideoTool === 'trim') {
+      setVideoToolStatus("Configurando comando...");
+
+      setVideoToolStatus("Executando operação...");
+      console.log(`Iniciando processamento: ${activeVideoTool}`, { trimStart, trimEnd, duration: trimEnd - trimStart });
+
+      if (activeVideoTool === 'trim') {
         outputFilename = 'trimmed.mp4';
         mimeType = 'video/mp4';
         const duration = trimEnd - trimStart;
@@ -376,7 +389,9 @@ export function ConvertPage() {
           '-ss', trimStart.toString(),
           '-i', 'input.mp4',
           '-t', duration.toString(),
-          '-c', 'copy', // Fast copy without re-encoding
+          '-c:v', 'libx264',
+          '-preset', 'ultrafast',
+          '-c:a', 'aac',
           outputFilename
         ]);
       }
@@ -393,17 +408,9 @@ export function ConvertPage() {
           outputFilename
         ]);
       }
-      else if (activeVideoTool === 'remove-audio') {
-        outputFilename = 'no-audio.mp4';
-        mimeType = 'video/mp4';
-        await ffmpeg.exec([
-          '-i', 'input.mp4',
-          '-c', 'copy',
-          '-an',
-          outputFilename
-        ]);
-      }
 
+
+      setVideoToolStatus("Finalizando...");
       const data = await ffmpeg.readFile(outputFilename);
       const url = URL.createObjectURL(new Blob([data as any], { type: mimeType }));
       setVideoToolResult(url);
@@ -433,9 +440,7 @@ export function ConvertPage() {
     a.href = videoToolResult;
 
     let extension = 'mp4';
-    if (activeVideoTool === 'extract-frame') extension = 'png';
     if (activeVideoTool === 'to-gif') extension = 'gif';
-
     a.download = `jara_${activeVideoTool}_${Date.now()}.${extension}`;
     document.body.appendChild(a);
     a.click();
@@ -516,6 +521,7 @@ export function ConvertPage() {
       setSelectedFilePath(null);
       setError(null);
       setSuccess(null);
+      setConversionResult(null);
     }
   }, []);
 
@@ -561,7 +567,9 @@ export function ConvertPage() {
         setIsLoadingFFmpeg(false);
         setProgress(100);
 
-        downloadBlob(blob, filename);
+        const url = URL.createObjectURL(blob);
+        downloadBlob(blob, filename); // Keep auto-download
+        setConversionResult({ url, filename });
         setSuccess(`Arquivo convertido: ${filename}`);
       }
     } catch (e) {
@@ -577,6 +585,7 @@ export function ConvertPage() {
     setSelectedFilePath(null);
     setError(null);
     setSuccess(null);
+    setConversionResult(null);
     setProgress(0);
   };
 
@@ -703,23 +712,7 @@ export function ConvertPage() {
               <div className="mt-8">
                 <h3 className="text-xs uppercase tracking-wider text-gray-500 mb-3 font-mono">vídeo</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Extract Frame */}
-                  <button
-                    onClick={() => handleVideoToolSelect("extract-frame")}
-                    className="group p-4 bg-dark-800 border border-dark-700 rounded-xl hover:border-white/30 hover:bg-dark-700 transition-all text-left"
-                    style={{ borderColor: "#3b82f620" }}
-                  >
-                    <div
-                      className="w-10 h-10 mb-3 rounded-lg flex items-center justify-center transition-colors"
-                      style={{ backgroundColor: "#3b82f620" }}
-                    >
-                      <svg className="w-5 h-5" style={{ color: "#3b82f6" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <p className="text-white text-sm font-medium mb-1">Extrair Frame</p>
-                    <p className="text-gray-500 text-xs font-mono">capturar imagem</p>
-                  </button>
+
 
                   {/* Trim Video */}
                   <button
@@ -755,25 +748,6 @@ export function ConvertPage() {
                     </div>
                     <p className="text-white text-sm font-medium mb-1">Vídeo para GIF</p>
                     <p className="text-gray-500 text-xs font-mono">criar animação</p>
-                  </button>
-
-                  {/* Remove Audio */}
-                  <button
-                    onClick={() => handleVideoToolSelect("remove-audio")}
-                    className="group p-4 bg-dark-800 border border-dark-700 rounded-xl hover:border-white/30 hover:bg-dark-700 transition-all text-left"
-                    style={{ borderColor: "#f43f5e20" }}
-                  >
-                    <div
-                      className="w-10 h-10 mb-3 rounded-lg flex items-center justify-center transition-colors"
-                      style={{ backgroundColor: "#f43f5e20" }}
-                    >
-                      <svg className="w-5 h-5" style={{ color: "#f43f5e" }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" stroke="#f43f5e" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-                      </svg>
-                    </div>
-                    <p className="text-white text-sm font-medium mb-1">Remover Áudio</p>
-                    <p className="text-gray-500 text-xs font-mono">silenciar vídeo</p>
                   </button>
                 </div>
               </div>
@@ -1104,12 +1078,36 @@ export function ConvertPage() {
                   {/* Result Preview if available */}
                   {videoToolResult && (
                     <div className="bg-dark-800 rounded-xl p-4 border border-green-500/30">
-                      <p className="text-green-400 text-xs mb-2 font-mono uppercase">Resultado Pronto</p>
-                      {activeVideoTool === 'extract-frame' || activeVideoTool === 'to-gif' ? (
+                      <div className="flex justify-between items-center mb-4">
+                        <p className="text-green-400 text-xs font-mono uppercase">Resultado Pronto</p>
+                        <button
+                          onClick={handleDownloadVideoResult}
+                          className="px-3 py-1 bg-green-500/10 text-green-500 hover:bg-green-500/20 rounded-lg text-xs font-mono transition-colors flex items-center gap-2"
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          baixar agora
+                        </button>
+                      </div>
+
+                      {activeVideoTool === 'to-gif' ? (
                         <img src={videoToolResult} className="w-full max-h-[300px] object-contain rounded-lg bg-black/50" />
                       ) : (
                         <video src={videoToolResult} controls className="w-full max-h-[300px] rounded-lg bg-black" />
                       )}
+
+                      <div className="mt-4">
+                        <button
+                          onClick={handleDownloadVideoResult}
+                          className="w-full py-3 bg-white text-black rounded-lg font-medium text-sm hover:bg-gray-200 transition-colors flex justify-center items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Baixar Resultado
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -1135,22 +1133,15 @@ export function ConvertPage() {
                         {isProcessingVideo ? (
                           <>
                             <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                            <span>processando ({videoToolProgress}%)</span>
+                            <span>{videoToolStatus || `processando (${videoToolProgress}%)`}</span>
                           </>
                         ) : (
                           "Processar Vídeo"
                         )}
                       </button>
                     ) : (
-                      <button
-                        onClick={handleDownloadVideoResult}
-                        className="flex-1 py-3 bg-white text-black rounded-lg font-medium text-sm hover:bg-gray-200 transition-colors flex justify-center items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        Baixar Resultado
-                      </button>
+                      // Button removed from here as it is now inside the result card
+                      null
                     )}
                   </div>
 
@@ -1173,7 +1164,7 @@ export function ConvertPage() {
           )}
 
           {/* CONVERSION VIEW (after selecting preset or custom) */}
-          {!showPresetGrid && !activeImageTool && (
+          {!showPresetGrid && !activeImageTool && !activeVideoTool && (
             <>
               {/* Back button */}
               <button
@@ -1349,13 +1340,30 @@ export function ConvertPage() {
 
               {/* Success */}
               {success && (
-                <div className="p-4 bg-dark-800 border border-dark-600 rounded-lg text-white text-sm animate-fade-in">
-                  <p className="flex items-center gap-2">
+                <div className="p-4 bg-dark-800 border border-dark-600 rounded-lg animate-fade-in">
+                  <p className="flex items-center gap-2 text-white text-sm mb-3">
                     <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                     {success}
                   </p>
+
+                  {conversionResult && (
+                    <button
+                      onClick={() => {
+                        const a = document.createElement("a");
+                        a.href = conversionResult.url;
+                        a.download = conversionResult.filename;
+                        a.click();
+                      }}
+                      className="w-full py-2 bg-dark-700 hover:bg-dark-600 text-white rounded-lg text-xs font-mono transition-colors flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      baixar novamente
+                    </button>
+                  )}
                 </div>
               )}
             </>

@@ -33,6 +33,9 @@ function stubTauriModules(): Plugin {
 
 export default defineConfig({
   plugins: [stubTauriModules(), react()],
+  optimizeDeps: {
+    exclude: ["@ffmpeg/ffmpeg", "@ffmpeg/util"],
+  },
   clearScreen: false,
   server: {
     port: 1420,
